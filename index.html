@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pickleball Tracker & Cost Splitter</title>
   <style>
+    .summary-chip {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
     :root {
       --primary: #15803d;
       --primary-hover: #166534;
@@ -287,6 +300,9 @@
 
     <div class="card">
       <h2>⏳ Pending Payments (Who owes who)</h2>
+      <!-- ADDED FOR SUMMARY -->
+      <div id="pendingSummaryCards" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;"></div>
+      
       <div id="pendingDebtsList"></div>
     </div>
 
@@ -465,8 +481,11 @@
     let totalPending = 0;
     let totalSettled = 0;
 
+    const summaryCardsContainer = document.getElementById('pendingSummaryCards');
     const pendingContainer = document.getElementById('pendingDebtsList');
     const settledContainer = document.getElementById('settledDebtsList');
+
+    if (summaryCardsContainer) summaryCardsContainer.innerHTML = '';
     pendingContainer.innerHTML = '';
     settledContainer.innerHTML = '';
 
@@ -480,6 +499,25 @@
     document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
     document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
 
+    // --- NEW: Calculate & Render Totals Per Person ---
+    if (summaryCardsContainer) {
+      if (pendingList.length > 0) {
+        const debtorTotals = {};
+        pendingList.forEach(d => {
+          const key = `${d.from} owes ${d.to}`;
+          debtorTotals[key] = (debtorTotals[key] || 0) + d.amount;
+        });
+
+        Object.entries(debtorTotals).forEach(([rel, amount]) => {
+          const chip = document.createElement('div');
+          chip.className = 'summary-chip';
+          chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
+          summaryCardsContainer.appendChild(chip);
+        });
+      }
+    }
+
+    // Render Individual Pending Items
     if (pendingList.length === 0) {
       pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
     } else {
@@ -499,6 +537,7 @@
       });
     }
 
+    // Render Settled Items
     if (settledList.length === 0) {
       settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
     } else {
