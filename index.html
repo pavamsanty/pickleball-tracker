@@ -149,76 +149,71 @@
     .alert-success { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; display: none; }
   </style>
 
-  <!-- Firebase SDK via CDN -->
+  <!-- Firebase Realtime Database SDK via CDN -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
     import { 
-      getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy 
-    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+      getDatabase, ref, set, push, onValue, remove, update 
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
-    // --- PASTE YOUR FIREBASE CONFIG HERE ---
+    // Your Firebase Configuration using Realtime Database
     const firebaseConfig = {
-  apiKey: "AIzaSyBRmGfbzzoxSKtMOY1soZliCy5oGcsvERg",
-  authDomain: "pickleball-tracker-b8e1a.firebaseapp.com",
-  databaseURL: "https://pickleball-tracker-b8e1a-default-rtdb.firebaseio.com",
-  projectId: "pickleball-tracker-b8e1a",
-  storageBucket: "pickleball-tracker-b8e1a.firebasestorage.app",
-  messagingSenderId: "693180296722",
-  appId: "1:693180296722:web:16f9737202b719a49332cb",
-  measurementId: "G-HVCS099967"
-};
+      databaseURL: "https://pickleball-tracker-b8e1a-default-rtdb.firebaseio.com",
+      projectId: "pickleball-tracker-b8e1a"
+    };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
 
-    // Global in-memory cache updated by real-time listeners
     window.allSessions = [];
     window.allDebts = [];
 
     // Real-time listener for Sessions
-    const sessionsQuery = query(collection(db, "sessions"), orderBy("date", "desc"));
-    onSnapshot(sessionsQuery, (snapshot) => {
-      window.allSessions = [];
-      snapshot.forEach(docSnap => {
-        window.allSessions.push({ id: docSnap.id, ...docSnap.data() });
-      });
+    onValue(ref(db, 'sessions'), (snapshot) => {
+      const data = snapshot.val() || {};
+      window.allSessions = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      window.allSessions.sort((a, b) => new Date(b.date) - new Date(a.date));
       window.renderCurrentView();
     });
 
     // Real-time listener for Debts
-    const debtsQuery = query(collection(db, "debts"), orderBy("date", "desc"));
-    onSnapshot(debtsQuery, (snapshot) => {
-      window.allDebts = [];
-      snapshot.forEach(docSnap => {
-        window.allDebts.push({ id: docSnap.id, ...docSnap.data() });
-      });
+    onValue(ref(db, 'debts'), (snapshot) => {
+      const data = snapshot.val() || {};
+      window.allDebts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      window.allDebts.sort((a, b) => new Date(b.date) - new Date(a.date));
       window.renderCurrentView();
     });
 
-    // Cloud Database Operations
     window.dbAddSession = async function(sessionData, debtsData) {
-      const sessRef = await addDoc(collection(db, "sessions"), sessionData);
+      const sessRef = push(ref(db, 'sessions'));
+      await set(sessRef, sessionData);
+
       for (const d of debtsData) {
-        d.sessionId = sessRef.id;
-        await addDoc(collection(db, "debts"), d);
+        d.sessionId = sessRef.key;
+        const debtRef = push(ref(db, 'debts'));
+        await set(debtRef, d);
       }
     };
 
     window.dbMarkAsPaid = async function(debtId) {
-      const debtRef = doc(db, "debts", debtId);
-      await updateDoc(debtRef, { status: "paid", paidAt: new Date().toISOString() });
+      await update(ref(db, `debts/${debtId}`), {
+        status: "paid",
+        paidAt: new Date().toISOString()
+      });
     };
 
     window.dbMarkAsUnpaid = async function(debtId) {
-      const debtRef = doc(db, "debts", debtId);
-      await updateDoc(debtRef, { status: "pending", paidAt: null });
+      await update(ref(db, `debts/${debtId}`), {
+        status: "pending",
+        paidAt: null
+      });
     };
 
     window.dbDeleteSession = async function(sessionId) {
-      await deleteDoc(doc(db, "sessions", sessionId));
+      await remove(ref(db, `sessions/${sessionId}`));
       const relatedDebts = window.allDebts.filter(d => d.sessionId === sessionId);
       for (const d of relatedDebts) {
-        await deleteDoc(doc(db, "debts", d.id));
+        await remove(ref(db, `debts/${d.id}`));
       }
     };
   </script>
@@ -228,7 +223,7 @@
 <div class="container">
   <header>
     <h1>🏓 Pickleball Court Splitter</h1>
-    <div class="subtitle">Cloud-synced balances & reservations</div>
+    <div class="subtitle">Realtime cloud balances & reservations</div>
   </header>
 
   <!-- Navigation -->
@@ -455,7 +450,7 @@
       setTimeout(() => { msg.style.display = 'none'; }, 3000);
       switchTab('balances');
     } catch (err) {
-      alert('Error saving to database: ' + err.message);
+      alert('Error saving: ' + err.message);
     } finally {
       btn.disabled = false;
       btn.innerText = 'Add Cost';
