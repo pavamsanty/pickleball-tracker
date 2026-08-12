@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pickleball Split & Settle</title>
+  <title>Pickleball Tracker & Cost Splitter</title>
   <style>
     :root {
       --primary: #15803d;
@@ -13,142 +13,347 @@
       --border: #e2e8f0;
       --text: #1e293b;
       --text-muted: #64748b;
+      --pending-bg: #fef3c7;
+      --pending-text: #92400e;
+      --paid-bg: #dcfce7;
+      --paid-text: #166534;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 24px 16px;
+      padding: 16px;
     }
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
+    .container { max-width: 760px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { margin: 0 0 6px 0; font-size: 1.6rem; color: var(--primary); }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .nav-tabs {
+      display: flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    h1 { margin-top: 0; font-size: 1.5rem; color: var(--primary); }
-    h2 { font-size: 1.15rem; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    h2 {
+      font-size: 1.1rem;
+      margin-top: 0;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      color: var(--text);
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text-muted); }
     input, select {
       width: 100%;
       box-sizing: border-box;
-      padding: 8px 12px;
+      padding: 9px 12px;
       border: 1px solid var(--border);
       border-radius: 6px;
       font-size: 0.95rem;
+      background: #fff;
     }
     button {
       cursor: pointer;
       border: none;
       border-radius: 6px;
-      padding: 8px 16px;
       font-weight: 600;
-      transition: background-color 0.2s;
+      transition: all 0.15s;
     }
-    .btn-primary { background: var(--primary); color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+    }
     .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: #e2e8f0; color: var(--text); }
-    .btn-secondary:hover { background: #cbd5e1; }
-    .btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; }
-    .player-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--text);
+      padding: 8px 14px;
+      border: 1px solid var(--border);
     }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+    .btn-pay { background: var(--primary); color: #fff; }
+    .btn-pay:hover { background: var(--primary-hover); }
+    .btn-undo { background: #e2e8f0; color: var(--text-muted); }
+    .btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; }
+    .player-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
     .player-row input:first-child { flex: 2; }
     .player-row input:nth-child(2) { flex: 1; }
-    .settlement-box {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      padding: 16px;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .stat-val { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .stat-val.pending { color: #d97706; }
+    .stat-lbl { font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted); }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .badge-paid { background: var(--paid-bg); color: var(--paid-text); }
+    .item-card {
+      background: #fff;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      margin-top: 16px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
     }
-    .settlement-item {
-      padding: 6px 0;
-      font-weight: 500;
-      border-bottom: 1px dashed #dcfce7;
-    }
-    .settlement-item:last-child { border-bottom: none; }
-    .summary-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; }
+    .item-meta { font-size: 0.85rem; color: var(--text-muted); }
+    .empty-state { text-align: center; padding: 36px 16px; color: var(--text-muted); }
+    .history-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
+    .history-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; }
+    .alert-success { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; display: none; }
   </style>
+
+  <!-- Firebase SDK via CDN -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import { 
+      getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy 
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+    // --- PASTE YOUR FIREBASE CONFIG HERE ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyBRmGfbzzoxSKtMOY1soZliCy5oGcsvERg",
+  authDomain: "pickleball-tracker-b8e1a.firebaseapp.com",
+  databaseURL: "https://pickleball-tracker-b8e1a-default-rtdb.firebaseio.com",
+  projectId: "pickleball-tracker-b8e1a",
+  storageBucket: "pickleball-tracker-b8e1a.firebasestorage.app",
+  messagingSenderId: "693180296722",
+  appId: "1:693180296722:web:16f9737202b719a49332cb",
+  measurementId: "G-HVCS099967"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Global in-memory cache updated by real-time listeners
+    window.allSessions = [];
+    window.allDebts = [];
+
+    // Real-time listener for Sessions
+    const sessionsQuery = query(collection(db, "sessions"), orderBy("date", "desc"));
+    onSnapshot(sessionsQuery, (snapshot) => {
+      window.allSessions = [];
+      snapshot.forEach(docSnap => {
+        window.allSessions.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      window.renderCurrentView();
+    });
+
+    // Real-time listener for Debts
+    const debtsQuery = query(collection(db, "debts"), orderBy("date", "desc"));
+    onSnapshot(debtsQuery, (snapshot) => {
+      window.allDebts = [];
+      snapshot.forEach(docSnap => {
+        window.allDebts.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      window.renderCurrentView();
+    });
+
+    // Cloud Database Operations
+    window.dbAddSession = async function(sessionData, debtsData) {
+      const sessRef = await addDoc(collection(db, "sessions"), sessionData);
+      for (const d of debtsData) {
+        d.sessionId = sessRef.id;
+        await addDoc(collection(db, "debts"), d);
+      }
+    };
+
+    window.dbMarkAsPaid = async function(debtId) {
+      const debtRef = doc(db, "debts", debtId);
+      await updateDoc(debtRef, { status: "paid", paidAt: new Date().toISOString() });
+    };
+
+    window.dbMarkAsUnpaid = async function(debtId) {
+      const debtRef = doc(db, "debts", debtId);
+      await updateDoc(debtRef, { status: "pending", paidAt: null });
+    };
+
+    window.dbDeleteSession = async function(sessionId) {
+      await deleteDoc(doc(db, "sessions", sessionId));
+      const relatedDebts = window.allDebts.filter(d => d.sessionId === sessionId);
+      for (const d of relatedDebts) {
+        await deleteDoc(doc(db, "debts", d.id));
+      }
+    };
+  </script>
 </head>
 <body>
 
 <div class="container">
-  <h1>🏓 Pickleball Split & Settle</h1>
+  <header>
+    <h1>🏓 Pickleball Court Splitter</h1>
+    <div class="subtitle">Cloud-synced balances & reservations</div>
+  </header>
 
-  <div class="card">
-    <h2>1. Session Details</h2>
-    <div class="grid-2">
-      <div class="form-group">
-        <label>Session Date</label>
-        <input type="date" id="sessionDate" />
+  <!-- Navigation -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('add')">➕ Add Session</button>
+    <button class="tab-btn" onclick="switchTab('balances')">💰 Current Status & Settle</button>
+    <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+  </div>
+
+  <!-- TAB 1: ADD SESSION -->
+  <div id="tab-add">
+    <div id="successMsg" class="alert-success">✓ Session synced to cloud database!</div>
+
+    <div class="card">
+      <h2>1. Reservation Details</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Date of Play</label>
+          <input type="date" id="sessionDate" />
+        </div>
+        <div class="form-group">
+          <label>Court Cost ($)</label>
+          <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
+        </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Players & Plus-Ones</h2>
       <div class="form-group">
-        <label>Total Court Cost ($)</label>
-        <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
+        <label>Player Name & Guests Brought (+1, +2)</label>
       </div>
+      <div id="playerList"></div>
+      <button type="button" class="btn-secondary btn-sm" onclick="addPlayerRow()">+ Add Another Player</button>
+
+      <div class="form-group" style="margin-top: 18px;">
+        <label>Who paid the reservation upfront?</label>
+        <select id="payerSelect"></select>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="submitBtn" onclick="handleAddCost()">Add Cost</button>
+  </div>
+
+  <!-- TAB 2: BALANCES -->
+  <div id="tab-balances" style="display: none;">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">Total Court Spend</div>
+        <div class="stat-val" id="statTotalSpend">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Total Pending</div>
+        <div class="stat-val pending" id="statTotalPending">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Total Settled</div>
+        <div class="stat-val" id="statTotalSettled">$0.00</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⏳ Pending Payments (Who owes who)</h2>
+      <div id="pendingDebtsList"></div>
+    </div>
+
+    <div class="card">
+      <h2>✅ Settled / Completed Payments</h2>
+      <div id="settledDebtsList"></div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>2. Players & Plus-Ones</h2>
-    <div class="summary-text">List player names and any extra guests (+1, +2) they brought.</div>
-    <div id="playerList">
-      <!-- Player Rows -->
+  <!-- TAB 3: HISTORY -->
+  <div id="tab-history" style="display: none;">
+    <div class="card">
+      <h2>Past Court Sessions</h2>
+      <div id="historyList"></div>
     </div>
-    <button class="btn-secondary" onclick="addPlayerRow()">+ Add Player</button>
-
-    <div class="form-group" style="margin-top: 16px;">
-      <label>Who paid the full court reservation upfront?</label>
-      <select id="payerSelect"></select>
-    </div>
-  </div>
-
-  <button class="btn-primary" onclick="calculateSplit()">Calculate Settlements</button>
-
-  <div class="card" id="resultsCard" style="display: none; margin-top: 20px;">
-    <h2>3. Payment Breakdown & Settlements</h2>
-    <p id="summaryInfo" class="summary-text"></p>
-    <div id="settlementList" class="settlement-box"></div>
   </div>
 </div>
 
 <script>
-  let players = [
+  let activeTab = 'add';
+  let activePlayers = [
     { name: 'Santosh', plus: 0 },
     { name: 'Alex', plus: 1 },
     { name: 'Dave', plus: 0 },
-    { name: 'Elena', plus: 1 }
+    { name: 'Elena', plus: 0 }
   ];
 
   window.onload = function() {
     document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('courtCost').value = 60.00;
-    renderPlayers();
+    document.getElementById('courtCost').value = '60.00';
+    renderPlayerInputs();
   };
 
-  function renderPlayers() {
+  function switchTab(tabId) {
+    activeTab = tabId;
+    document.getElementById('tab-add').style.display = tabId === 'add' ? 'block' : 'none';
+    document.getElementById('tab-balances').style.display = tabId === 'balances' ? 'block' : 'none';
+    document.getElementById('tab-history').style.display = tabId === 'history' ? 'block' : 'none';
+
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs[0].className = tabId === 'add' ? 'tab-btn active' : 'tab-btn';
+    tabs[1].className = tabId === 'balances' ? 'tab-btn active' : 'tab-btn';
+    tabs[2].className = tabId === 'history' ? 'tab-btn active' : 'tab-btn';
+
+    window.renderCurrentView();
+  }
+
+  window.renderCurrentView = function() {
+    if (activeTab === 'balances') renderBalancesTab();
+    if (activeTab === 'history') renderHistoryTab();
+  };
+
+  function renderPlayerInputs() {
     const list = document.getElementById('playerList');
     list.innerHTML = '';
-    players.forEach((p, index) => {
+    activePlayers.forEach((p, idx) => {
       const row = document.createElement('div');
       row.className = 'player-row';
       row.innerHTML = `
-        <input type="text" placeholder="Player Name" value="${p.name}" oninput="updateName(${index}, this.value)" />
-        <input type="number" min="0" placeholder="+ Guests" value="${p.plus}" oninput="updatePlus(${index}, this.value)" title="Plus ones" />
-        <button class="btn-danger" onclick="removePlayer(${index})">✕</button>
+        <input type="text" placeholder="Player Name" value="${p.name}" oninput="updatePlayerName(${idx}, this.value)" />
+        <input type="number" min="0" placeholder="+ Guests" value="${p.plus}" oninput="updatePlayerPlus(${idx}, this.value)" title="Plus Ones" />
+        <button type="button" class="btn-danger" onclick="removePlayerRow(${idx})">✕</button>
       `;
       list.appendChild(row);
     });
@@ -156,89 +361,211 @@
   }
 
   function addPlayerRow() {
-    players.push({ name: '', plus: 0 });
-    renderPlayers();
+    activePlayers.push({ name: '', plus: 0 });
+    renderPlayerInputs();
   }
 
-  function removePlayer(index) {
-    if (players.length > 1) {
-      players.splice(index, 1);
-      renderPlayers();
+  function removePlayerRow(idx) {
+    if (activePlayers.length > 1) {
+      activePlayers.splice(idx, 1);
+      renderPlayerInputs();
     }
   }
 
-  function updateName(index, val) {
-    players[index].name = val;
+  function updatePlayerName(idx, val) {
+    activePlayers[idx].name = val;
     updatePayerDropdown();
   }
 
-  function updatePlus(index, val) {
-    players[index].plus = parseInt(val, 10) || 0;
+  function updatePlayerPlus(idx, val) {
+    activePlayers[idx].plus = parseInt(val, 10) || 0;
   }
 
   function updatePayerDropdown() {
     const select = document.getElementById('payerSelect');
-    const prevSelected = select.value;
+    const prev = select.value;
     select.innerHTML = '';
-    players.forEach((p) => {
+    activePlayers.forEach(p => {
       const name = p.name.trim() || 'Unnamed';
       const opt = document.createElement('option');
       opt.value = name;
       opt.innerText = name;
       select.appendChild(opt);
     });
-    if (prevSelected) select.value = prevSelected;
+    if (prev) select.value = prev;
   }
 
-  function calculateSplit() {
+  async function handleAddCost() {
+    const date = document.getElementById('sessionDate').value;
     const cost = parseFloat(document.getElementById('courtCost').value) || 0;
-    const payerName = document.getElementById('payerSelect').value;
+    const payer = document.getElementById('payerSelect').value;
 
-    let totalHeadcount = 0;
-    players.forEach(p => {
-      totalHeadcount += (1 + (parseInt(p.plus, 10) || 0));
-    });
-
-    if (totalHeadcount === 0 || cost <= 0) {
-      alert('Please enter a valid court cost and at least one player.');
+    if (!date || cost <= 0) {
+      alert('Please enter a valid date and court cost.');
       return;
     }
 
-    const costPerPerson = cost / totalHeadcount;
-    const resultsCard = document.getElementById('resultsCard');
-    const summaryInfo = document.getElementById('summaryInfo');
-    const settlementList = document.getElementById('settlementList');
+    const validPlayers = activePlayers.filter(p => p.name.trim() !== '');
+    if (validPlayers.length === 0) {
+      alert('Please enter at least one player.');
+      return;
+    }
 
-    summaryInfo.innerHTML = `
-      <strong>Total Spots:</strong> ${totalHeadcount} &nbsp;|&nbsp; 
-      <strong>Cost Per Person:</strong> $${costPerPerson.toFixed(2)}<br/>
-      <strong>Paid Upfront By:</strong> ${payerName} ($${cost.toFixed(2)})
-    `;
+    let totalHeadcount = 0;
+    validPlayers.forEach(p => {
+      totalHeadcount += 1 + (parseInt(p.plus, 10) || 0);
+    });
 
-    settlementList.innerHTML = '';
-    let hasDebts = false;
+    const costPerSpot = cost / totalHeadcount;
+    const newSession = {
+      date: date,
+      cost: cost,
+      payer: payer,
+      players: validPlayers,
+      totalSpots: totalHeadcount,
+      costPerSpot: costPerSpot,
+      createdAt: new Date().toISOString()
+    };
 
-    players.forEach(p => {
-      const name = p.name.trim() || 'Unnamed';
-      if (name !== payerName) {
+    const newDebts = [];
+    validPlayers.forEach(p => {
+      const name = p.name.trim();
+      if (name !== payer) {
         const spots = 1 + (parseInt(p.plus, 10) || 0);
-        const amountOwed = spots * costPerPerson;
-        if (amountOwed > 0) {
-          hasDebts = true;
-          const div = document.createElement('div');
-          div.className = 'settlement-item';
-          div.innerHTML = `💸 <strong>${name}</strong> owes <strong>${payerName}</strong>: $${amountOwed.toFixed(2)} <span style="color:var(--text-muted); font-size:0.85rem">(${spots} spot${spots > 1 ? 's' : ''})</span>`;
-          settlementList.appendChild(div);
-        }
+        newDebts.push({
+          date: date,
+          from: name,
+          to: payer,
+          spots: spots,
+          amount: spots * costPerSpot,
+          status: 'pending',
+          paidAt: null
+        });
       }
     });
 
-    if (!hasDebts) {
-      settlementList.innerHTML = '<div class="settlement-item">All settled up! No payments pending.</div>';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = 'Saving to cloud...';
+
+    try {
+      await window.dbAddSession(newSession, newDebts);
+      const msg = document.getElementById('successMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+      switchTab('balances');
+    } catch (err) {
+      alert('Error saving to database: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Add Cost';
+    }
+  }
+
+  function renderBalancesTab() {
+    const sessions = window.allSessions || [];
+    const debts = window.allDebts || [];
+
+    let totalSpend = sessions.reduce((sum, s) => sum + (s.cost || 0), 0);
+    let totalPending = 0;
+    let totalSettled = 0;
+
+    const pendingContainer = document.getElementById('pendingDebtsList');
+    const settledContainer = document.getElementById('settledDebtsList');
+    pendingContainer.innerHTML = '';
+    settledContainer.innerHTML = '';
+
+    const pendingList = debts.filter(d => d.status === 'pending');
+    const settledList = debts.filter(d => d.status === 'paid');
+
+    pendingList.forEach(d => totalPending += d.amount);
+    settledList.forEach(d => totalSettled += d.amount);
+
+    document.getElementById('statTotalSpend').innerText = `$${totalSpend.toFixed(2)}`;
+    document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
+    document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
+
+    if (pendingList.length === 0) {
+      pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
+    } else {
+      pendingList.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'item-card';
+        row.innerHTML = `
+          <div>
+            <div><strong>${d.from}</strong> owes <strong>${d.to}</strong>: <span style="color:var(--primary); font-weight:700;">$${d.amount.toFixed(2)}</span></div>
+            <div class="item-meta">Date: ${d.date} • ${d.spots} spot${d.spots > 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            <button class="btn-pay btn-sm" onclick="window.dbMarkAsPaid('${d.id}')">✓ Mark as Paid</button>
+          </div>
+        `;
+        pendingContainer.appendChild(row);
+      });
     }
 
-    resultsCard.style.display = 'block';
+    if (settledList.length === 0) {
+      settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
+    } else {
+      settledList.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'item-card';
+        row.innerHTML = `
+          <div>
+            <div><span class="badge badge-paid">PAID</span> <strong>${d.from}</strong> paid <strong>${d.to}</strong> $${d.amount.toFixed(2)}</div>
+            <div class="item-meta">Session: ${d.date} • Paid on: ${d.paidAt ? d.paidAt.split('T')[0] : 'Done'}</div>
+          </div>
+          <div>
+            <button class="btn-undo btn-sm" onclick="window.dbMarkAsUnpaid('${d.id}')">Undo</button>
+          </div>
+        `;
+        settledContainer.appendChild(row);
+      });
+    }
   }
+
+  function renderHistoryTab() {
+    const sessions = window.allSessions || [];
+    const historyContainer = document.getElementById('historyList');
+    historyContainer.innerHTML = '';
+
+    if (sessions.length === 0) {
+      historyContainer.innerHTML = '<div class="empty-state">No sessions added yet. Go to "Add Session" to record your first booking.</div>';
+      return;
+    }
+
+    sessions.forEach((s) => {
+      const card = document.createElement('div');
+      card.className = 'history-card';
+      
+      let playerChips = (s.players || []).map(p => {
+        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
+        return `<span class="chip">${p.name}${extra}</span>`;
+      }).join(' ');
+
+      card.innerHTML = `
+        <div class="history-header">
+          <div>📅 ${s.date} — <span style="color:var(--primary);">$${s.cost.toFixed(2)}</span></div>
+          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')">Delete</button>
+        </div>
+        <div class="item-meta">
+          <strong>Paid by:</strong> ${s.payer} &nbsp;|&nbsp; 
+          <strong>Total Spots:</strong> ${s.totalSpots} &nbsp;|&nbsp; 
+          <strong>Cost/Person:</strong> $${s.costPerSpot.toFixed(2)}
+        </div>
+        <div class="history-players">
+          ${playerChips}
+        </div>
+      `;
+      historyContainer.appendChild(card);
+    });
+  }
+
+  window.confirmDelete = function(sessionId) {
+    if (confirm('Are you sure you want to delete this session and its payments?')) {
+      window.dbDeleteSession(sessionId);
+    }
+  };
 </script>
 
 </body>
