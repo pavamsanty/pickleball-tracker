@@ -1,261 +1,245 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.7">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickleball Split & Settle</title>
+  <style>
+    :root {
+      --primary: #15803d;
+      --primary-hover: #166534;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    h1 { margin-top: 0; font-size: 1.5rem; color: var(--primary); }
+    h2 { font-size: 1.15rem; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; }
+    .player-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .player-row input:first-child { flex: 2; }
+    .player-row input:nth-child(2) { flex: 1; }
+    .settlement-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .settlement-item {
+      padding: 6px 0;
+      font-weight: 500;
+      border-bottom: 1px dashed #dcfce7;
+    }
+    .settlement-item:last-child { border-bottom: none; }
+    .summary-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; }
   </style>
 </head>
 <body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html lang="en"&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Pickleball Split &amp; Settle&lt;/title&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>:root {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--primary: #15803d;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--primary-hover: #166534;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--bg: #f8fafc;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--card-bg: #ffffff;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--border: #e2e8f0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--text: #1e293b;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>--text-muted: #64748b;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>body {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background-color: var(--bg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>color: var(--text);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin: 0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 24px 16px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.container {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>max-width: 680px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin: 0 auto;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.card {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: var(--card-bg);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 24px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin-bottom: 20px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>box-shadow: 0 1px 3px rgba(0,0,0,0.05);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>h1 { margin-top: 0; font-size: 1.5rem; color: var(--primary); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>h2 { font-size: 1.15rem; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.form-group { margin-bottom: 12px; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>input, select {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>width: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>box-sizing: border-box;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 8px 12px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1px solid var(--border);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 6px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-size: 0.95rem;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>button {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>cursor: pointer;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: none;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 6px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 8px 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 600;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>transition: background-color 0.2s;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.btn-primary { background: var(--primary); color: #fff; width: 100%; padding: 12px; font-size: 1rem; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.btn-primary:hover { background: var(--primary-hover); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.btn-secondary { background: #e2e8f0; color: var(--text); }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.btn-secondary:hover { background: #cbd5e1; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.player-row {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>display: flex;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>gap: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>align-items: center;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin-bottom: 10px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.player-row input:first-child { flex: 2; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.player-row input:nth-child(2) { flex: 1; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.settlement-box {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>background: #f0fdf4;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border: 1px solid #bbf7d0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 16px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-radius: 8px;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>margin-top: 16px;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.settlement-item {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>padding: 6px 0;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>font-weight: 500;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>border-bottom: 1px dashed #dcfce7;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.settlement-item:last-child { border-bottom: none; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>.summary-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; }</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;div class="container"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;h1&gt;🏓 Pickleball Split &amp; Settle&lt;/h1&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="card"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;1. Session Details&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="grid-2"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="form-group"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;label&gt;Session Date&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="date" id="sessionDate" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="form-group"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;label&gt;Total Court Cost ($)&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="number" id="courtCost" placeholder="60.00" step="0.01" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="card"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;2. Players &amp; Plus-Ones&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="summary-text"&gt;List player names and any extra guests (+1, +2) they brought.&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="playerList"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;!-- Player Rows will be injected here --&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;button class="btn-secondary" onclick="addPlayerRow()"&gt;+ Add Player&lt;/button&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="form-group" style="margin-top: 16px;"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;Who paid the full court reservation upfront?&lt;/label&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;select id="payerSelect"&gt;&lt;/select&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;button class="btn-primary" onclick="calculateSplit()"&gt;Calculate Settlements&lt;/button&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="card" id="resultsCard" style="display: none; margin-top: 20px;"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;3. Payment Breakdown &amp; Settlements&lt;/h2&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;p id="summaryInfo" class="summary-text"&gt;&lt;/p&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="settlementList" class="settlement-box"&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
-<p class="p1">&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>let players = [</p>
-<p class="p1"><span class="Apple-converted-space">    </span>{ name: 'Santosh', plus: 0 },</p>
-<p class="p1"><span class="Apple-converted-space">    </span>{ name: 'Alex', plus: 1 },</p>
-<p class="p1"><span class="Apple-converted-space">    </span>{ name: 'Dave', plus: 0 },</p>
-<p class="p1"><span class="Apple-converted-space">    </span>{ name: 'Elena', plus: 1 }</p>
-<p class="p1"><span class="Apple-converted-space">  </span>];</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>window.onload = function() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];</p>
-<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('courtCost').value = 60.00;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>renderPlayers();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>};</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function renderPlayers() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const list = document.getElementById('playerList');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>list.innerHTML = '';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players.forEach((p, index) =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const row = document.createElement('div');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>row.className = 'player-row';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>row.innerHTML = `</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="text" placeholder="Player Name" value="${p.name}" oninput="updateName(${index}, this.value)" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="number" min="0" placeholder="+ Guests" value="${p.plus}" oninput="updatePlus(${index}, this.value)" title="Plus ones" /&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;button class="btn-danger" onclick="removePlayer(${index})"&gt;✕&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>`;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>list.appendChild(row);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p1"><span class="Apple-converted-space">    </span>updatePayerDropdown();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function addPlayerRow() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players.push({ name: '', plus: 0 });</p>
-<p class="p1"><span class="Apple-converted-space">    </span>renderPlayers();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function removePlayer(index) {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (players.length &gt; 1) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>players.splice(index, 1);</p>
-<p class="p1"><span class="Apple-converted-space">      </span>renderPlayers();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function updateName(index, val) {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players[index].name = val;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>updatePayerDropdown();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function updatePlus(index, val) {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players[index].plus = parseInt(val, 10) || 0;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function updatePayerDropdown() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const select = document.getElementById('payerSelect');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const prevSelected = select.value;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>select.innerHTML = '';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players.forEach((p) =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const name = p.name.trim() || 'Unnamed';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const opt = document.createElement('option');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>opt.value = name;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>opt.innerText = name;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>select.appendChild(opt);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (prevSelected) select.value = prevSelected;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>function calculateSplit() {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const cost = parseFloat(document.getElementById('courtCost').value) || 0;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const payerName = document.getElementById('payerSelect').value;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>let totalHeadcount = 0;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>players.forEach(p =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>totalHeadcount += (1 + (parseInt(p.plus, 10) || 0));</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (totalHeadcount === 0 || cost &lt;= 0) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>alert('Please enter a valid court cost and at least one player.');</p>
-<p class="p1"><span class="Apple-converted-space">      </span>return;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>const costPerPerson = cost / totalHeadcount;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const resultsCard = document.getElementById('resultsCard');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const summaryInfo = document.getElementById('summaryInfo');</p>
-<p class="p1"><span class="Apple-converted-space">    </span>const settlementList = document.getElementById('settlementList');</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>summaryInfo.innerHTML = `</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;strong&gt;Total Spots:&lt;/strong&gt; ${totalHeadcount} &amp;nbsp;|&amp;nbsp;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;strong&gt;Cost Per Person:&lt;/strong&gt; $${costPerPerson.toFixed(2)}&lt;br/&gt;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>&lt;strong&gt;Paid Upfront By:&lt;/strong&gt; ${payerName} ($${cost.toFixed(2)})</p>
-<p class="p1"><span class="Apple-converted-space">    </span>`;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>settlementList.innerHTML = '';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let hasDebts = false;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>players.forEach(p =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>const name = p.name.trim() || 'Unnamed';</p>
-<p class="p1"><span class="Apple-converted-space">      </span>if (name !== payerName) {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const spots = 1 + (parseInt(p.plus, 10) || 0);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const amountOwed = spots * costPerPerson;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>if (amountOwed &gt; 0) {</p>
-<p class="p1"><span class="Apple-converted-space">          </span>hasDebts = true;</p>
-<p class="p1"><span class="Apple-converted-space">          </span>const div = document.createElement('div');</p>
-<p class="p1"><span class="Apple-converted-space">          </span>div.className = 'settlement-item';</p>
-<p class="p1"><span class="Apple-converted-space">          </span>div.innerHTML = `💸 &lt;strong&gt;${name}&lt;/strong&gt; owes &lt;strong&gt;${payerName}&lt;/strong&gt;: $${amountOwed.toFixed(2)} &lt;span style="color:var(--text-muted); font-size:0.85rem"&gt;(${spots} spot${spots &gt; 1 ? 's' : ''})&lt;/span&gt;`;</p>
-<p class="p1"><span class="Apple-converted-space">          </span>settlementList.appendChild(div);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">      </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (!hasDebts) {</p>
-<p class="p1"><span class="Apple-converted-space">      </span>settlementList.innerHTML = '&lt;div class="settlement-item"&gt;All settled up! No payments pending.&lt;/div&gt;';</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>resultsCard.style.display = 'block';</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1">&lt;/script&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+
+<div class="container">
+  <h1>🏓 Pickleball Split & Settle</h1>
+
+  <div class="card">
+    <h2>1. Session Details</h2>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Session Date</label>
+        <input type="date" id="sessionDate" />
+      </div>
+      <div class="form-group">
+        <label>Total Court Cost ($)</label>
+        <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Players & Plus-Ones</h2>
+    <div class="summary-text">List player names and any extra guests (+1, +2) they brought.</div>
+    <div id="playerList">
+      <!-- Player Rows -->
+    </div>
+    <button class="btn-secondary" onclick="addPlayerRow()">+ Add Player</button>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label>Who paid the full court reservation upfront?</label>
+      <select id="payerSelect"></select>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="calculateSplit()">Calculate Settlements</button>
+
+  <div class="card" id="resultsCard" style="display: none; margin-top: 20px;">
+    <h2>3. Payment Breakdown & Settlements</h2>
+    <p id="summaryInfo" class="summary-text"></p>
+    <div id="settlementList" class="settlement-box"></div>
+  </div>
+</div>
+
+<script>
+  let players = [
+    { name: 'Santosh', plus: 0 },
+    { name: 'Alex', plus: 1 },
+    { name: 'Dave', plus: 0 },
+    { name: 'Elena', plus: 1 }
+  ];
+
+  window.onload = function() {
+    document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('courtCost').value = 60.00;
+    renderPlayers();
+  };
+
+  function renderPlayers() {
+    const list = document.getElementById('playerList');
+    list.innerHTML = '';
+    players.forEach((p, index) => {
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Player Name" value="${p.name}" oninput="updateName(${index}, this.value)" />
+        <input type="number" min="0" placeholder="+ Guests" value="${p.plus}" oninput="updatePlus(${index}, this.value)" title="Plus ones" />
+        <button class="btn-danger" onclick="removePlayer(${index})">✕</button>
+      `;
+      list.appendChild(row);
+    });
+    updatePayerDropdown();
+  }
+
+  function addPlayerRow() {
+    players.push({ name: '', plus: 0 });
+    renderPlayers();
+  }
+
+  function removePlayer(index) {
+    if (players.length > 1) {
+      players.splice(index, 1);
+      renderPlayers();
+    }
+  }
+
+  function updateName(index, val) {
+    players[index].name = val;
+    updatePayerDropdown();
+  }
+
+  function updatePlus(index, val) {
+    players[index].plus = parseInt(val, 10) || 0;
+  }
+
+  function updatePayerDropdown() {
+    const select = document.getElementById('payerSelect');
+    const prevSelected = select.value;
+    select.innerHTML = '';
+    players.forEach((p) => {
+      const name = p.name.trim() || 'Unnamed';
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.innerText = name;
+      select.appendChild(opt);
+    });
+    if (prevSelected) select.value = prevSelected;
+  }
+
+  function calculateSplit() {
+    const cost = parseFloat(document.getElementById('courtCost').value) || 0;
+    const payerName = document.getElementById('payerSelect').value;
+
+    let totalHeadcount = 0;
+    players.forEach(p => {
+      totalHeadcount += (1 + (parseInt(p.plus, 10) || 0));
+    });
+
+    if (totalHeadcount === 0 || cost <= 0) {
+      alert('Please enter a valid court cost and at least one player.');
+      return;
+    }
+
+    const costPerPerson = cost / totalHeadcount;
+    const resultsCard = document.getElementById('resultsCard');
+    const summaryInfo = document.getElementById('summaryInfo');
+    const settlementList = document.getElementById('settlementList');
+
+    summaryInfo.innerHTML = `
+      <strong>Total Spots:</strong> ${totalHeadcount} &nbsp;|&nbsp; 
+      <strong>Cost Per Person:</strong> $${costPerPerson.toFixed(2)}<br/>
+      <strong>Paid Upfront By:</strong> ${payerName} ($${cost.toFixed(2)})
+    `;
+
+    settlementList.innerHTML = '';
+    let hasDebts = false;
+
+    players.forEach(p => {
+      const name = p.name.trim() || 'Unnamed';
+      if (name !== payerName) {
+        const spots = 1 + (parseInt(p.plus, 10) || 0);
+        const amountOwed = spots * costPerPerson;
+        if (amountOwed > 0) {
+          hasDebts = true;
+          const div = document.createElement('div');
+          div.className = 'settlement-item';
+          div.innerHTML = `💸 <strong>${name}</strong> owes <strong>${payerName}</strong>: $${amountOwed.toFixed(2)} <span style="color:var(--text-muted); font-size:0.85rem">(${spots} spot${spots > 1 ? 's' : ''})</span>`;
+          settlementList.appendChild(div);
+        }
+      }
+    });
+
+    if (!hasDebts) {
+      settlementList.innerHTML = '<div class="settlement-item">All settled up! No payments pending.</div>';
+    }
+
+    resultsCard.style.display = 'block';
+  }
+</script>
+
 </body>
 </html>
