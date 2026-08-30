@@ -5,19 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pickleball Tracker & Cost Splitter</title>
   <style>
-    .summary-chip {
-      background: #fef3c7;
-      border: 1px solid #fde68a;
-      color: #92400e;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    
     :root {
       --primary: #15803d;
       --primary-hover: #166534;
@@ -49,13 +36,15 @@
       border-radius: 10px;
       margin-bottom: 20px;
       gap: 4px;
+      flex-wrap: wrap;
     }
     .tab-btn {
       flex: 1;
+      min-width: 120px;
       border: none;
       background: transparent;
-      padding: 10px 14px;
-      font-size: 0.92rem;
+      padding: 10px 10px;
+      font-size: 0.88rem;
       font-weight: 600;
       color: var(--text-muted);
       border-radius: 8px;
@@ -84,6 +73,7 @@
       color: var(--text);
     }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px; }
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text-muted); }
     input, select {
@@ -159,7 +149,31 @@
     .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
     .history-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .chip { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; }
+    .summary-chip {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
     .alert-success { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; display: none; }
+    .member-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .member-table th, .member-table td {
+      border: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    .member-table th { background: #f1f5f9; color: var(--text-muted); }
   </style>
 
   <!-- Firebase Realtime Database SDK via CDN -->
@@ -169,7 +183,6 @@
       getDatabase, ref, set, push, onValue, remove, update 
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
-    // Your Firebase Configuration using Realtime Database
     const firebaseConfig = {
       databaseURL: "https://pickleball-tracker-b8e1a-default-rtdb.firebaseio.com",
       projectId: "pickleball-tracker-b8e1a"
@@ -180,6 +193,7 @@
 
     window.allSessions = [];
     window.allDebts = [];
+    window.allMembers = [];
 
     // Real-time listener for Sessions
     onValue(ref(db, 'sessions'), (snapshot) => {
@@ -197,6 +211,15 @@
       window.renderCurrentView();
     });
 
+    // Real-time listener for Registered Members
+    onValue(ref(db, 'members'), (snapshot) => {
+      const data = snapshot.val() || {};
+      window.allMembers = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      window.allMembers.sort((a, b) => a.enrollmentId - b.enrollmentId);
+      window.updateNextEnrollmentId();
+      window.renderCurrentView();
+    });
+
     window.dbAddSession = async function(sessionData, debtsData) {
       const sessRef = push(ref(db, 'sessions'));
       await set(sessRef, sessionData);
@@ -206,6 +229,15 @@
         const debtRef = push(ref(db, 'debts'));
         await set(debtRef, d);
       }
+    };
+
+    window.dbAddMember = async function(memberData) {
+      const memRef = push(ref(db, 'members'));
+      await set(memRef, memberData);
+    };
+
+    window.dbDeleteMember = async function(memberDbKey) {
+      await remove(ref(db, `members/${memberDbKey}`));
     };
 
     window.dbMarkAsPaid = async function(debtId) {
@@ -236,13 +268,14 @@
 <div class="container">
   <header>
     <h1>🏓 Pickleball Court Splitter</h1>
-    <div class="subtitle">Realtime cloud balances & reservations</div>
+    <div class="subtitle">Realtime cloud balances & member management</div>
   </header>
 
   <!-- Navigation -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('add')">➕ Add Session</button>
     <button class="tab-btn" onclick="switchTab('balances')">💰 Current Status & Settle</button>
+    <button class="tab-btn" onclick="switchTab('members')">👥 Players</button>
     <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
   </div>
 
@@ -259,7 +292,7 @@
         </div>
         <div class="form-group">
           <label>Court Cost ($)</label>
-          <input type="number" id="courtCost" placeholder="6.00" step="0.01" />
+          <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
         </div>
       </div>
     </div>
@@ -300,9 +333,7 @@
 
     <div class="card">
       <h2>⏳ Pending Payments (Who owes who)</h2>
-      <!-- ADDED FOR SUMMARY -->
       <div id="pendingSummaryCards" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;"></div>
-      
       <div id="pendingDebtsList"></div>
     </div>
 
@@ -312,7 +343,44 @@
     </div>
   </div>
 
-  <!-- TAB 3: HISTORY -->
+  <!-- TAB 3: MEMBERS -->
+  <div id="tab-members" style="display: none;">
+    <div id="memberSuccessMsg" class="alert-success">✓ Player registered successfully!</div>
+
+    <div class="card">
+      <h2>Add New Player</h2>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Enrollment ID</label>
+          <input type="text" id="newEnrollmentId" readonly style="background: #f1f5f9; font-weight: bold;" />
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="newMemberName" placeholder="Enter player name" />
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="newMemberGender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" id="addMemberBtn" onclick="handleAddMember()">Register Player</button>
+    </div>
+
+    <div class="card">
+      <h2>Search & Registered Players List</h2>
+      <div class="form-group">
+        <label>Search by Enrollment ID or Name</label>
+        <input type="text" id="searchMemberInput" placeholder="Enter Enrollment ID (e.g. 1) or Name..." oninput="renderMembersTab()" />
+      </div>
+      <div id="membersContainer"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: HISTORY -->
   <div id="tab-history" style="display: none;">
     <div class="card">
       <h2>Past Court Sessions</h2>
@@ -325,14 +393,14 @@
   let activeTab = 'add';
   let activePlayers = [
     { name: 'Santosh', plus: 0 },
-    { name: 'Kedar', plus: 0 },
-    { name: 'Rijwan', plus: 0 },
-    { name: 'Nitin', plus: 0 }
+    { name: 'Alex', plus: 1 },
+    { name: 'Dave', plus: 0 },
+    { name: 'Elena', plus: 0 }
   ];
 
   window.onload = function() {
     document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('courtCost').value = '6.00';
+    document.getElementById('courtCost').value = '60.00';
     renderPlayerInputs();
   };
 
@@ -340,20 +408,35 @@
     activeTab = tabId;
     document.getElementById('tab-add').style.display = tabId === 'add' ? 'block' : 'none';
     document.getElementById('tab-balances').style.display = tabId === 'balances' ? 'block' : 'none';
+    document.getElementById('tab-members').style.display = tabId === 'members' ? 'block' : 'none';
     document.getElementById('tab-history').style.display = tabId === 'history' ? 'block' : 'none';
 
     const tabs = document.querySelectorAll('.tab-btn');
     tabs[0].className = tabId === 'add' ? 'tab-btn active' : 'tab-btn';
     tabs[1].className = tabId === 'balances' ? 'tab-btn active' : 'tab-btn';
-    tabs[2].className = tabId === 'history' ? 'tab-btn active' : 'tab-btn';
+    tabs[2].className = tabId === 'members' ? 'tab-btn active' : 'tab-btn';
+    tabs[3].className = tabId === 'history' ? 'tab-btn active' : 'tab-btn';
 
     window.renderCurrentView();
   }
 
   window.renderCurrentView = function() {
     if (activeTab === 'balances') renderBalancesTab();
+    if (activeTab === 'members') renderMembersTab();
     if (activeTab === 'history') renderHistoryTab();
   };
+
+  function updateNextEnrollmentId() {
+    const members = window.allMembers || [];
+    let maxId = 0;
+    members.forEach(m => {
+      if (m.enrollmentId && m.enrollmentId > maxId) {
+        maxId = m.enrollmentId;
+      }
+    });
+    const nextIdElem = document.getElementById('newEnrollmentId');
+    if (nextIdElem) nextIdElem.value = maxId + 1;
+  }
 
   function renderPlayerInputs() {
     const list = document.getElementById('playerList');
@@ -473,6 +556,90 @@
     }
   }
 
+  async function handleAddMember() {
+    const enrollmentId = parseInt(document.getElementById('newEnrollmentId').value, 10) || 1;
+    const name = document.getElementById('newMemberName').value.trim();
+    const gender = document.getElementById('newMemberGender').value;
+
+    if (!name) {
+      alert('Please enter a player name.');
+      return;
+    }
+
+    const btn = document.getElementById('addMemberBtn');
+    btn.disabled = true;
+    btn.innerText = 'Registering...';
+
+    try {
+      await window.dbAddMember({
+        enrollmentId: enrollmentId,
+        name: name,
+        gender: gender,
+        registeredAt: new Date().toISOString()
+      });
+
+      document.getElementById('newMemberName').value = '';
+      const msg = document.getElementById('memberSuccessMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    } catch (err) {
+      alert('Error adding member: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Register Player';
+    }
+  }
+
+  function renderMembersTab() {
+    const container = document.getElementById('membersContainer');
+    const members = window.allMembers || [];
+    const searchVal = (document.getElementById('searchMemberInput').value || '').toLowerCase().trim();
+
+    const filtered = members.filter(m => {
+      const idMatch = String(m.enrollmentId).includes(searchVal);
+      const nameMatch = (m.name || '').toLowerCase().includes(searchVal);
+      return idMatch || nameMatch;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state">No players found.</div>';
+      return;
+    }
+
+    let html = `
+      <table class="member-table">
+        <thead>
+          <tr>
+            <th>Enrollment ID</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    filtered.forEach(m => {
+      html += `
+        <tr>
+          <td><strong>#${m.enrollmentId}</strong></td>
+          <td>${m.name}</td>
+          <td>${m.gender}</td>
+          <td><button class="btn-danger btn-sm" onclick="confirmDeleteMember('${m.id}')">Delete</button></td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  }
+
+  window.confirmDeleteMember = function(memberDbKey) {
+    if (confirm('Are you sure you want to remove this player?')) {
+      window.dbDeleteMember(memberDbKey);
+    }
+  };
+
   function renderBalancesTab() {
     const sessions = window.allSessions || [];
     const debts = window.allDebts || [];
@@ -499,25 +666,23 @@
     document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
     document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
 
-    // --- NEW: Calculate & Render Totals Per Person ---
-    if (summaryCardsContainer) {
-      if (pendingList.length > 0) {
-        const debtorTotals = {};
-        pendingList.forEach(d => {
-          const key = `${d.from} owes ${d.to}`;
-          debtorTotals[key] = (debtorTotals[key] || 0) + d.amount;
-        });
+    // Render Summary Cards
+    if (summaryCardsContainer && pendingList.length > 0) {
+      const debtorTotals = {};
+      pendingList.forEach(d => {
+        const key = `${d.from} owes ${d.to}`;
+        debtorTotals[key] = (debtorTotals[key] || 0) + d.amount;
+      });
 
-        Object.entries(debtorTotals).forEach(([rel, amount]) => {
-          const chip = document.createElement('div');
-          chip.className = 'summary-chip';
-          chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
-          summaryCardsContainer.appendChild(chip);
-        });
-      }
+      Object.entries(debtorTotals).forEach(([rel, amount]) => {
+        const chip = document.createElement('div');
+        chip.className = 'summary-chip';
+        chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
+        summaryCardsContainer.appendChild(chip);
+      });
     }
 
-    // Render Individual Pending Items
+    // Render Pending Debts List
     if (pendingList.length === 0) {
       pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
     } else {
@@ -537,7 +702,7 @@
       });
     }
 
-    // Render Settled Items
+    // Render Settled Debts List
     if (settledList.length === 0) {
       settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
     } else {
