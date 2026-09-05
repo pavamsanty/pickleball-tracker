@@ -211,10 +211,13 @@
     onValue(ref(db, 'sessions'), (snapshot) => {
       const data = snapshot.val() || {};
       window.allSessions = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-      window.allSessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Robust sorting by date string
+      window.allSessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      
       window.renderCurrentView();
     });
-
+    
     // Real-time listener for Debts
     onValue(ref(db, 'debts'), (snapshot) => {
       const data = snapshot.val() || {};
@@ -654,6 +657,48 @@
     }
   };
 
+function renderHistoryTab() {
+    const sessions = window.allSessions || [];
+    const historyContainer = document.getElementById('historyList');
+    
+    if (!historyContainer) return;
+    historyContainer.innerHTML = '';
+
+    if (sessions.length === 0) {
+      historyContainer.innerHTML = '<div class="empty-state">No sessions added yet. Go to "Add Session" to record your first booking.</div>';
+      return;
+    }
+
+    sessions.forEach((s) => {
+      const card = document.createElement('div');
+      card.className = 'history-card';
+      
+      const costVal = typeof s.cost === 'number' ? s.cost : parseFloat(s.cost || 0);
+      const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
+
+      let playerChips = (s.players || []).map(p => {
+        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
+        return `<span class="chip">${p.name}${extra}</span>`;
+      }).join(' ');
+
+      card.innerHTML = `
+        <div class="history-header">
+          <div>📅 ${s.date} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span></div>
+          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')">Delete</button>
+        </div>
+        <div class="item-meta">
+          <strong>Paid by:</strong> ${s.payer || 'Unknown'} &nbsp;|&nbsp; 
+          <strong>Total Spots:</strong> ${s.totalSpots || 0} &nbsp;|&nbsp; 
+          <strong>Cost/Person:</strong> $${spotVal.toFixed(2)}
+        </div>
+        <div class="history-players" style="margin-top: 10px;">
+          ${playerChips}
+        </div>
+      `;
+      historyContainer.appendChild(card);
+    });
+  }
+  
  function renderBalancesTab() {
     const sessions = window.allSessions || [];
     const debts = window.allDebts || [];
