@@ -25,6 +25,18 @@
       margin: 0;
       padding: 16px;
     }
+    .summary-chip-paid {
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
     .container { max-width: 760px; margin: 0 auto; }
     header { text-align: center; margin-bottom: 20px; }
     h1 { margin: 0 0 6px 0; font-size: 1.6rem; color: var(--primary); }
@@ -339,6 +351,7 @@
 
     <div class="card">
       <h2>✅ Settled / Completed Payments</h2>
+      <div id="settledSummaryCards" ...></div>
       <div id="settledDebtsList"></div>
     </div>
   </div>
@@ -393,9 +406,10 @@
   let activeTab = 'add';
   let activePlayers = [
     { name: 'Santosh', plus: 0 },
-    { name: 'Alex', plus: 1 },
-    { name: 'Dave', plus: 0 },
-    { name: 'Elena', plus: 0 }
+    { name: 'Kedar', plus: 1 },
+    { name: 'Rijwan', plus: 0 },
+    { name: 'Nitin', plus: 0 },
+    { name: 'Shashi', plus: 0 }
   ];
 
   window.onload = function() {
@@ -640,7 +654,7 @@
     }
   };
 
-  function renderBalancesTab() {
+ function renderBalancesTab() {
     const sessions = window.allSessions || [];
     const debts = window.allDebts || [];
 
@@ -648,11 +662,13 @@
     let totalPending = 0;
     let totalSettled = 0;
 
-    const summaryCardsContainer = document.getElementById('pendingSummaryCards');
+    const pendingSummaryCardsContainer = document.getElementById('pendingSummaryCards');
+    const settledSummaryCardsContainer = document.getElementById('settledSummaryCards');
     const pendingContainer = document.getElementById('pendingDebtsList');
     const settledContainer = document.getElementById('settledDebtsList');
 
-    if (summaryCardsContainer) summaryCardsContainer.innerHTML = '';
+    if (pendingSummaryCardsContainer) pendingSummaryCardsContainer.innerHTML = '';
+    if (settledSummaryCardsContainer) settledSummaryCardsContainer.innerHTML = '';
     pendingContainer.innerHTML = '';
     settledContainer.innerHTML = '';
 
@@ -666,8 +682,8 @@
     document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
     document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
 
-    // Render Summary Cards
-    if (summaryCardsContainer && pendingList.length > 0) {
+    // --- PENDING SUMMARY (Who owes what) ---
+    if (pendingSummaryCardsContainer && pendingList.length > 0) {
       const debtorTotals = {};
       pendingList.forEach(d => {
         const key = `${d.from} owes ${d.to}`;
@@ -678,11 +694,26 @@
         const chip = document.createElement('div');
         chip.className = 'summary-chip';
         chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
-        summaryCardsContainer.appendChild(chip);
+        pendingSummaryCardsContainer.appendChild(chip);
       });
     }
 
-    // Render Pending Debts List
+    // --- SETTLED SUMMARY (Total paid by each member) ---
+    if (settledSummaryCardsContainer && settledList.length > 0) {
+      const payerTotals = {};
+      settledList.forEach(d => {
+        payerTotals[d.from] = (payerTotals[d.from] || 0) + d.amount;
+      });
+
+      Object.entries(payerTotals).forEach(([member, amount]) => {
+        const chip = document.createElement('div');
+        chip.className = 'summary-chip-paid';
+        chip.innerHTML = `✅ <span><strong>${member}</strong> paid: <strong>$${amount.toFixed(2)}</strong> total</span>`;
+        settledSummaryCardsContainer.appendChild(chip);
+      });
+    }
+
+    // Render Pending Items List
     if (pendingList.length === 0) {
       pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
     } else {
@@ -702,7 +733,7 @@
       });
     }
 
-    // Render Settled Debts List
+    // Render Settled Items List
     if (settledList.length === 0) {
       settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
     } else {
@@ -721,43 +752,6 @@
         settledContainer.appendChild(row);
       });
     }
-  }
-
-  function renderHistoryTab() {
-    const sessions = window.allSessions || [];
-    const historyContainer = document.getElementById('historyList');
-    historyContainer.innerHTML = '';
-
-    if (sessions.length === 0) {
-      historyContainer.innerHTML = '<div class="empty-state">No sessions added yet. Go to "Add Session" to record your first booking.</div>';
-      return;
-    }
-
-    sessions.forEach((s) => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      
-      let playerChips = (s.players || []).map(p => {
-        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
-        return `<span class="chip">${p.name}${extra}</span>`;
-      }).join(' ');
-
-      card.innerHTML = `
-        <div class="history-header">
-          <div>📅 ${s.date} — <span style="color:var(--primary);">$${s.cost.toFixed(2)}</span></div>
-          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')">Delete</button>
-        </div>
-        <div class="item-meta">
-          <strong>Paid by:</strong> ${s.payer} &nbsp;|&nbsp; 
-          <strong>Total Spots:</strong> ${s.totalSpots} &nbsp;|&nbsp; 
-          <strong>Cost/Person:</strong> $${s.costPerSpot.toFixed(2)}
-        </div>
-        <div class="history-players">
-          ${playerChips}
-        </div>
-      `;
-      historyContainer.appendChild(card);
-    });
   }
 
   window.confirmDelete = function(sessionId) {
