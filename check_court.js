@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 
 // Configuration
 const TARGET_URL = 'https://app.courtreserve.com/Online/Reservations/Bookings/13206?sId=16955';
-const TARGET_TIME = '05:00 PM'; // Time slot you are looking for
+const TARGET_TIME = '03:00 PM'; // Time slot you are looking for
 const NOTIFY_EMAIL = 'Santosh.pillai@outlook.com';
 
 // Setup Email Transporter (e.g., Gmail App Password)
