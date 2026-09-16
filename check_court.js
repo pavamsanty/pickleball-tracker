@@ -1,6 +1,7 @@
 const { chromium } = require('playwright');
 const nodemailer = require('nodemailer');
 
+const BOOKING_URL = 'https://app.courtreserve.com/Online/Reservations/Bookings/13206?sId=16955';
 const TARGET_TIME = '3:00 PM'; 
 const NOTIFY_EMAIL = process.env.EMAIL_USER;
 
@@ -31,62 +32,56 @@ async function checkAvailability() {
 
   const page = await context.newPage();
 
-  // Remove automation flags
+  // Hide automation flags
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
   });
 
   try {
-    // 1. Navigate to main portal login URL
-    console.log('1. Navigating to https://app.courtreserve.com...');
-    await page.goto('https://app.courtreserve.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // 1. Navigate directly to organization booking portal
+    console.log(`1. Navigating to ${BOOKING_URL}...`);
+    await page.goto(BOOKING_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForTimeout(3000);
 
-    // 2. Perform Login if login fields are present
-    const usernameInput = await page.$('input[name="UserName"], input[name="Email"], input[type="email"]');
-    if (usernameInput) {
-      console.log('2. Logging in with credentials...');
-      await usernameInput.fill(process.env.COURTRESERVE_USER);
-      
-      const passwordInput = await page.$('input[name="Password"], input[type="password"]');
-      if (passwordInput) {
-        await passwordInput.fill(process.env.COURTRESERVE_PASS);
-      }
+    // 2. Perform Login if redirected to a login page
+    if (page.url().includes('Login') || page.url().includes('Account')) {
+      console.log('2. Redirected to login page. Entering credentials...');
+      const usernameInput = await page.waitForSelector('input[name="UserName"], input[name="Email"], input[type="email"]', { timeout: 10000 });
+      if (usernameInput) {
+        await usernameInput.fill(process.env.COURTRESERVE_USER);
+        
+        const passwordInput = await page.$('input[name="Password"], input[type="password"]');
+        if (passwordInput) {
+          await passwordInput.fill(process.env.COURTRESERVE_PASS);
+        }
 
-      const loginBtn = await page.$('button[type="submit"], input[type="submit"], .btn-primary');
-      if (loginBtn) {
-        await loginBtn.click();
-        await page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {});
+        const loginBtn = await page.$('button[type="submit"], input[type="submit"], .btn-primary');
+        if (loginBtn) {
+          await loginBtn.click();
+          await page.waitForNavigation({ waitUntil: 'domcontentloaded' }).catch(() => {});
+        }
       }
+    }
+
+    // 3. Ensure we are on the organization booking URL after logging in
+    if (!page.url().includes('13206')) {
+      console.log('3. Redirecting to Pickleball Court Reservation page...');
+      await page.goto(BOOKING_URL, { waitUntil: 'domcontentloaded' });
     }
 
     await page.waitForTimeout(4000);
 
-    // 3. Open the "Reservations" navigation dropdown menu
-    console.log('3. Clicking on "Reservations" menu...');
-    const reservationsMenu = page.locator('a, button, span').filter({ hasText: /^Reservations/i }).first();
-    await reservationsMenu.waitFor({ state: 'visible', timeout: 15000 });
-    await reservationsMenu.click();
-    await page.waitForTimeout(1000);
-
-    // 4. Click on "Pickleball Court Reservations"
-    console.log('4. Clicking on "Pickleball Court Reservations"...');
-    const pickleballOption = page.locator('a, span, li').filter({ hasText: /^Pickleball Court Reservations/i }).first();
-    await pickleballOption.waitFor({ state: 'visible', timeout: 10000 });
-    await pickleballOption.click();
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded' }).catch(() => {});
-    await page.waitForTimeout(4000);
-
-    // 5. Click on the "TODAY" button on the grid header
-    console.log('5. Clicking on "TODAY" button...');
+    // 4. Click the "TODAY" button if present on the scheduler header
+    console.log('4. Looking for TODAY button...');
     const todayBtn = page.locator('button, a, div').filter({ hasText: /^TODAY$/i }).first();
-    if (await todayBtn.isVisible()) {
+    if (await todayBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      console.log('Clicking TODAY button...');
       await todayBtn.click();
       await page.waitForTimeout(3000);
     }
 
-    // 6. Inspect the grid for open slots at target time
-    console.log(`6. Checking availability for ${TARGET_TIME}...`);
+    // 5. Check slot availability for target time
+    console.log(`5. Inspecting schedule for ${TARGET_TIME}...`);
     const pageText = await page.innerText('body');
 
     if (pageText.includes('you have been blocked') || pageText.includes('Attention Required!')) {
