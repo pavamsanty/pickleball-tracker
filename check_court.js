@@ -14,15 +14,37 @@ const transporter = nodemailer.createTransport({
 });
 
 async function checkAvailability() {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  // Launch browser with realistic user arguments to bypass Cloudflare
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled'
+    ]
+  });
+
+  // Create a context with realistic desktop browser headers and viewport
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    viewport: { width: 1280, height: 800 },
+    locale: 'en-US',
+    timezoneId: 'America/Los_Angeles'
+  });
+
+  const page = await context.newPage();
+
+  // Hide automation flags in navigator properties
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+  });
 
   try {
     console.log('Navigating to CourtReserve...');
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    // Wait for network activity to settle
-    await page.waitForLoadState('networkidle').catch(() => {});
+    // Allow Cloudflare challenge / JavaScript to resolve
+    await page.waitForTimeout(6000);
 
     // Check if redirected to Login
     if (page.url().includes('Login') || page.url().includes('Account')) {
@@ -36,18 +58,20 @@ async function checkAvailability() {
       }
     }
 
-    // Wait 5 seconds for the scheduler table grid to render
     console.log('Waiting for court grid to load...');
     await page.waitForTimeout(5000);
 
-    // Search page content for the target time and "Reserve" button
     const pageText = await page.innerText('body');
-    const searchTime = TARGET_TIME.replace(/^0/, '').trim(); // "3:00 PM"
-    const searchTimeNoSpace = searchTime.replace(/\s+/g, ''); // "3:00PM"
 
-    const hasTimeText = pageText.includes(searchTime) || pageText.includes(searchTimeNoSpace);
+    // Check if Cloudflare block page is rendered
+    if (pageText.includes('you have been blocked') || pageText.includes('Attention Required! | Cloudflare')) {
+      console.error('❌ Cloudflare anti-bot trigger detected.');
+      return;
+    }
 
-    // Verify if "Reserve" appears near the time slot
+    const searchTime = TARGET_TIME.replace(/^0/, '').trim(); 
+    const searchTimeNoSpace = searchTime.replace(/\s+/g, '');
+
     const isSlotAvailable = await page.evaluate(({ timeStr, timeNoSpace }) => {
       const elements = Array.from(document.querySelectorAll('tr, td, div, .k-scheduler-table tr'));
       return elements.some(el => {
@@ -58,7 +82,7 @@ async function checkAvailability() {
       });
     }, { timeStr: searchTime, timeNoSpace: searchTimeNoSpace });
 
-    if (isSlotAvailable || (hasTimeText && pageText.toUpperCase().includes('RESERVE'))) {
+    if (isSlotAvailable) {
       console.log(`✅ SUCCESS: Slot found for ${TARGET_TIME}! Sending alert email...`);
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -68,8 +92,6 @@ async function checkAvailability() {
       });
     } else {
       console.log(`❌ No open slots found for ${TARGET_TIME}.`);
-      console.log('--- Page Preview Text ---');
-      console.log(pageText.substring(0, 500)); // Log page content for debugging
     }
 
   } catch (error) {
