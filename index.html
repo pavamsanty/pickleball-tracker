@@ -25,18 +25,6 @@
       margin: 0;
       padding: 16px;
     }
-    .summary-chip-paid {
-      background: #dcfce7;
-      border: 1px solid #bbf7d0;
-      color: #166534;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
     .container { max-width: 760px; margin: 0 auto; }
     header { text-align: center; margin-bottom: 20px; }
     h1 { margin: 0 0 6px 0; font-size: 1.6rem; color: var(--primary); }
@@ -52,11 +40,11 @@
     }
     .tab-btn {
       flex: 1;
-      min-width: 120px;
+      min-width: 110px;
       border: none;
       background: transparent;
-      padding: 10px 10px;
-      font-size: 0.88rem;
+      padding: 10px 8px;
+      font-size: 0.85rem;
       font-weight: 600;
       color: var(--text-muted);
       border-radius: 8px;
@@ -85,7 +73,7 @@
       color: var(--text);
     }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text-muted); }
     input, select {
@@ -123,6 +111,8 @@
     .btn-pay:hover { background: var(--primary-hover); }
     .btn-undo { background: #e2e8f0; color: var(--text-muted); }
     .btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; }
+    .btn-edit { background: #e0f2fe; color: #0369a1; padding: 5px 10px; font-size: 0.8rem; }
+    .btn-edit:hover { background: #bae6fd; }
     .player-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
     .player-row input:first-child { flex: 2; }
     .player-row input:nth-child(2) { flex: 1; }
@@ -173,6 +163,18 @@
       align-items: center;
       gap: 6px;
     }
+    .summary-chip-paid {
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
     .alert-success { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; display: none; }
     .member-table {
       width: 100%;
@@ -206,23 +208,21 @@
     window.allSessions = [];
     window.allDebts = [];
     window.allMembers = [];
+    window.allBookedCourts = [];
 
     // Real-time listener for Sessions
     onValue(ref(db, 'sessions'), (snapshot) => {
       const data = snapshot.val() || {};
       window.allSessions = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-      
-      // Robust sorting by date string
       window.allSessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      
       window.renderCurrentView();
     });
-    
+
     // Real-time listener for Debts
     onValue(ref(db, 'debts'), (snapshot) => {
       const data = snapshot.val() || {};
       window.allDebts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-      window.allDebts.sort((a, b) => new Date(b.date) - new Date(a.date));
+      window.allDebts.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       window.renderCurrentView();
     });
 
@@ -232,6 +232,19 @@
       window.allMembers = Object.keys(data).map(key => ({ id: key, ...data[key] }));
       window.allMembers.sort((a, b) => a.enrollmentId - b.enrollmentId);
       window.updateNextEnrollmentId();
+      window.renderCurrentView();
+    });
+
+    // Real-time listener for Booked Courts
+    onValue(ref(db, 'booked_courts'), (snapshot) => {
+      const data = snapshot.val() || {};
+      window.allBookedCourts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      // Sort in ascending order (earliest date first)
+      window.allBookedCourts.sort((a, b) => {
+        const dateCompare = (a.date || '').localeCompare(b.date || '');
+        if (dateCompare !== 0) return dateCompare;
+        return (a.time || '').localeCompare(b.time || '');
+      });
       window.renderCurrentView();
     });
 
@@ -253,6 +266,19 @@
 
     window.dbDeleteMember = async function(memberDbKey) {
       await remove(ref(db, `members/${memberDbKey}`));
+    };
+
+    window.dbAddBookedCourt = async function(bookingData) {
+      const bookingRef = push(ref(db, 'booked_courts'));
+      await set(bookingRef, bookingData);
+    };
+
+    window.dbUpdateBookedCourt = async function(bookingId, updatedData) {
+      await update(ref(db, `booked_courts/${bookingId}`), updatedData);
+    };
+
+    window.dbDeleteBookedCourt = async function(bookingId) {
+      await remove(ref(db, `booked_courts/${bookingId}`));
     };
 
     window.dbMarkAsPaid = async function(debtId) {
@@ -283,13 +309,14 @@
 <div class="container">
   <header>
     <h1>🏓 Pickleball Court Splitter</h1>
-    <div class="subtitle">Realtime cloud balances & member management</div>
+    <div class="subtitle">Realtime cloud balances, members & booked courts</div>
   </header>
 
   <!-- Navigation -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('add')">➕ Add Session</button>
     <button class="tab-btn" onclick="switchTab('balances')">💰 Current Status & Settle</button>
+    <button class="tab-btn" onclick="switchTab('booked')">📅 Booked Courts</button>
     <button class="tab-btn" onclick="switchTab('members')">👥 Players</button>
     <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
   </div>
@@ -307,7 +334,7 @@
         </div>
         <div class="form-group">
           <label>Court Cost ($)</label>
-          <input type="number" id="courtCost" placeholder="6.00" step="0.01" />
+          <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
         </div>
       </div>
     </div>
@@ -354,12 +381,41 @@
 
     <div class="card">
       <h2>✅ Settled / Completed Payments</h2>
-      <div id="settledSummaryCards" ...></div>
+      <div id="settledSummaryCards" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;"></div>
       <div id="settledDebtsList"></div>
     </div>
   </div>
 
-  <!-- TAB 3: MEMBERS -->
+  <!-- TAB 3: BOOKED COURTS -->
+  <div id="tab-booked" style="display: none;">
+    <div id="bookedSuccessMsg" class="alert-success">✓ Booked court saved successfully!</div>
+
+    <div class="card">
+      <h2>Add Booked Court Slot</h2>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="bookedDate" />
+        </div>
+        <div class="form-group">
+          <label>Time Slot</label>
+          <input type="time" id="bookedTime" value="18:00" />
+        </div>
+        <div class="form-group">
+          <label>Booked In Name Of</label>
+          <input type="text" id="bookedByName" placeholder="e.g. Santosh" />
+        </div>
+      </div>
+      <button class="btn-primary" id="addBookedBtn" onclick="handleAddBookedCourt()">Add Booking</button>
+    </div>
+
+    <div class="card">
+      <h2>Booked Courts Schedule (Ascending Order)</h2>
+      <div id="bookedCourtsList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: MEMBERS -->
   <div id="tab-members" style="display: none;">
     <div id="memberSuccessMsg" class="alert-success">✓ Player registered successfully!</div>
 
@@ -396,7 +452,7 @@
     </div>
   </div>
 
-  <!-- TAB 4: HISTORY -->
+  <!-- TAB 5: HISTORY -->
   <div id="tab-history" style="display: none;">
     <div class="card">
       <h2>Past Court Sessions</h2>
@@ -407,17 +463,19 @@
 
 <script>
   let activeTab = 'add';
+  let editingBookingId = null;
   let activePlayers = [
     { name: 'Santosh', plus: 0 },
-    { name: 'Kedar', plus: 0 },
-    { name: 'Rijwan', plus: 0 },
-    { name: 'Nitin', plus: 0 },
-    { name: 'Shashi', plus: 0 }
+    { name: 'Alex', plus: 1 },
+    { name: 'Dave', plus: 0 },
+    { name: 'Elena', plus: 0 }
   ];
 
   window.onload = function() {
-    document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('courtCost').value = '6.00';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sessionDate').value = today;
+    document.getElementById('bookedDate').value = today;
+    document.getElementById('courtCost').value = '60.00';
     renderPlayerInputs();
   };
 
@@ -425,20 +483,23 @@
     activeTab = tabId;
     document.getElementById('tab-add').style.display = tabId === 'add' ? 'block' : 'none';
     document.getElementById('tab-balances').style.display = tabId === 'balances' ? 'block' : 'none';
+    document.getElementById('tab-booked').style.display = tabId === 'booked' ? 'block' : 'none';
     document.getElementById('tab-members').style.display = tabId === 'members' ? 'block' : 'none';
     document.getElementById('tab-history').style.display = tabId === 'history' ? 'block' : 'none';
 
     const tabs = document.querySelectorAll('.tab-btn');
     tabs[0].className = tabId === 'add' ? 'tab-btn active' : 'tab-btn';
     tabs[1].className = tabId === 'balances' ? 'tab-btn active' : 'tab-btn';
-    tabs[2].className = tabId === 'members' ? 'tab-btn active' : 'tab-btn';
-    tabs[3].className = tabId === 'history' ? 'tab-btn active' : 'tab-btn';
+    tabs[2].className = tabId === 'booked' ? 'tab-btn active' : 'tab-btn';
+    tabs[3].className = tabId === 'members' ? 'tab-btn active' : 'tab-btn';
+    tabs[4].className = tabId === 'history' ? 'tab-btn active' : 'tab-btn';
 
     window.renderCurrentView();
   }
 
   window.renderCurrentView = function() {
     if (activeTab === 'balances') renderBalancesTab();
+    if (activeTab === 'booked') renderBookedTab();
     if (activeTab === 'members') renderMembersTab();
     if (activeTab === 'history') renderHistoryTab();
   };
@@ -573,6 +634,133 @@
     }
   }
 
+  async function handleAddBookedCourt() {
+    const date = document.getElementById('bookedDate').value;
+    const time = document.getElementById('bookedTime').value;
+    const bookedBy = document.getElementById('bookedByName').value.trim();
+
+    if (!date || !time || !bookedBy) {
+      alert('Please fill in Date, Time Slot, and Booked In Name.');
+      return;
+    }
+
+    const btn = document.getElementById('addBookedBtn');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    try {
+      await window.dbAddBookedCourt({
+        date: date,
+        time: time,
+        bookedBy: bookedBy,
+        createdAt: new Date().toISOString()
+      });
+
+      document.getElementById('bookedByName').value = '';
+      const msg = document.getElementById('bookedSuccessMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    } catch (err) {
+      alert('Error saving booking: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Add Booking';
+    }
+  }
+
+  function renderBookedTab() {
+    const container = document.getElementById('bookedCourtsList');
+    const bookings = window.allBookedCourts || [];
+
+    if (bookings.length === 0) {
+      container.innerHTML = '<div class="empty-state">No booked court slots added yet.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    bookings.forEach(b => {
+      const isEditing = editingBookingId === b.id;
+      const card = document.createElement('div');
+      card.className = 'item-card';
+
+      if (isEditing) {
+        card.innerHTML = `
+          <div style="width: 100%;">
+            <div class="grid-3" style="margin-bottom: 8px;">
+              <div>
+                <label>Date</label>
+                <input type="date" id="editDate_${b.id}" value="${b.date}" />
+              </div>
+              <div>
+                <label>Time</label>
+                <input type="time" id="editTime_${b.id}" value="${b.time}" />
+              </div>
+              <div>
+                <label>Booked In Name</label>
+                <input type="text" id="editName_${b.id}" value="${b.bookedBy}" />
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button class="btn-pay btn-sm" onclick="saveBookingEdit('${b.id}')">Save Changes</button>
+              <button class="btn-undo btn-sm" onclick="cancelBookingEdit()">Cancel</button>
+            </div>
+          </div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div>
+            <div><strong>📅 ${b.date}</strong> &nbsp;|&nbsp; ⏰ <strong>${b.time}</strong></div>
+            <div class="item-meta">Booked in name of: <strong>${b.bookedBy}</strong></div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-edit" onclick="startBookingEdit('${b.id}')">✏️ Edit</button>
+            <button class="btn-danger btn-sm" onclick="confirmDeleteBooking('${b.id}')">Delete</button>
+          </div>
+        `;
+      }
+      container.appendChild(card);
+    });
+  }
+
+  function startBookingEdit(bookingId) {
+    editingBookingId = bookingId;
+    renderBookedTab();
+  }
+
+  function cancelBookingEdit() {
+    editingBookingId = null;
+    renderBookedTab();
+  }
+
+  async function saveBookingEdit(bookingId) {
+    const newDate = document.getElementById(`editDate_${bookingId}`).value;
+    const newTime = document.getElementById(`editTime_${bookingId}`).value;
+    const newName = document.getElementById(`editName_${bookingId}`).value.trim();
+
+    if (!newDate || !newTime || !newName) {
+      alert('Please fill in Date, Time, and Name.');
+      return;
+    }
+
+    try {
+      await window.dbUpdateBookedCourt(bookingId, {
+        date: newDate,
+        time: newTime,
+        bookedBy: newName,
+        updatedAt: new Date().toISOString()
+      });
+      editingBookingId = null;
+    } catch (err) {
+      alert('Error updating booking: ' + err.message);
+    }
+  }
+
+  window.confirmDeleteBooking = function(bookingId) {
+    if (confirm('Are you sure you want to delete this booking entry?')) {
+      window.dbDeleteBookedCourt(bookingId);
+    }
+  };
+
   async function handleAddMember() {
     const enrollmentId = parseInt(document.getElementById('newEnrollmentId').value, 10) || 1;
     const name = document.getElementById('newMemberName').value.trim();
@@ -657,7 +845,107 @@
     }
   };
 
-function renderHistoryTab() {
+  function renderBalancesTab() {
+    const sessions = window.allSessions || [];
+    const debts = window.allDebts || [];
+
+    let totalSpend = sessions.reduce((sum, s) => sum + (s.cost || 0), 0);
+    let totalPending = 0;
+    let totalSettled = 0;
+
+    const pendingSummaryCardsContainer = document.getElementById('pendingSummaryCards');
+    const settledSummaryCardsContainer = document.getElementById('settledSummaryCards');
+    const pendingContainer = document.getElementById('pendingDebtsList');
+    const settledContainer = document.getElementById('settledDebtsList');
+
+    if (pendingSummaryCardsContainer) pendingSummaryCardsContainer.innerHTML = '';
+    if (settledSummaryCardsContainer) settledSummaryCardsContainer.innerHTML = '';
+    pendingContainer.innerHTML = '';
+    settledContainer.innerHTML = '';
+
+    const pendingList = debts.filter(d => d.status === 'pending');
+    const settledList = debts.filter(d => d.status === 'paid');
+
+    pendingList.forEach(d => totalPending += d.amount);
+    settledList.forEach(d => totalSettled += d.amount);
+
+    document.getElementById('statTotalSpend').innerText = `$${totalSpend.toFixed(2)}`;
+    document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
+    document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
+
+    // Render Pending Summary Cards
+    if (pendingSummaryCardsContainer && pendingList.length > 0) {
+      const debtorTotals = {};
+      pendingList.forEach(d => {
+        const key = `${d.from} owes ${d.to}`;
+        debtorTotals[key] = (debtorTotals[key] || 0) + d.amount;
+      });
+
+      Object.entries(debtorTotals).forEach(([rel, amount]) => {
+        const chip = document.createElement('div');
+        chip.className = 'summary-chip';
+        chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
+        pendingSummaryCardsContainer.appendChild(chip);
+      });
+    }
+
+    // Render Settled Summary Cards
+    if (settledSummaryCardsContainer && settledList.length > 0) {
+      const payerTotals = {};
+      settledList.forEach(d => {
+        payerTotals[d.from] = (payerTotals[d.from] || 0) + d.amount;
+      });
+
+      Object.entries(payerTotals).forEach(([member, amount]) => {
+        const chip = document.createElement('div');
+        chip.className = 'summary-chip-paid';
+        chip.innerHTML = `✅ <span><strong>${member}</strong> paid: <strong>$${amount.toFixed(2)}</strong> total</span>`;
+        settledSummaryCardsContainer.appendChild(chip);
+      });
+    }
+
+    // Render Pending List
+    if (pendingList.length === 0) {
+      pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
+    } else {
+      pendingList.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'item-card';
+        row.innerHTML = `
+          <div>
+            <div><strong>${d.from}</strong> owes <strong>${d.to}</strong>: <span style="color:var(--primary); font-weight:700;">$${d.amount.toFixed(2)}</span></div>
+            <div class="item-meta">Date: ${d.date} • ${d.spots} spot${d.spots > 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            <button class="btn-pay btn-sm" onclick="window.dbMarkAsPaid('${d.id}')">✓ Mark as Paid</button>
+          </div>
+        `;
+        pendingContainer.appendChild(row);
+      });
+    }
+
+    // Render Settled List
+    if (settledList.length === 0) {
+      settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
+    } else {
+      settledList.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'item-card';
+        row.innerHTML = `
+          <div>
+            <div><span class="badge badge-paid">PAID</span> <strong>${d.from}</strong> paid <strong>${d.to}</strong> $${d.amount.toFixed(2)}</div>
+            <div class="item-meta">Session: ${d.date} • Paid on: ${d.paidAt ? d.paidAt.split('T')[0] : 'Done'}</div>
+          </div>
+          <div>
+            <button class="btn-undo btn-sm" onclick="window.dbMarkAsUnpaid('${d.id}')">Undo</button>
+          </div>
+        `;
+        settledContainer.appendChild(row);
+      });
+    }
+  }
+
+  function renderHistoryTab() {
     const sessions = window.allSessions || [];
     const historyContainer = document.getElementById('historyList');
     
@@ -697,106 +985,6 @@ function renderHistoryTab() {
       `;
       historyContainer.appendChild(card);
     });
-  }
-  
- function renderBalancesTab() {
-    const sessions = window.allSessions || [];
-    const debts = window.allDebts || [];
-
-    let totalSpend = sessions.reduce((sum, s) => sum + (s.cost || 0), 0);
-    let totalPending = 0;
-    let totalSettled = 0;
-
-    const pendingSummaryCardsContainer = document.getElementById('pendingSummaryCards');
-    const settledSummaryCardsContainer = document.getElementById('settledSummaryCards');
-    const pendingContainer = document.getElementById('pendingDebtsList');
-    const settledContainer = document.getElementById('settledDebtsList');
-
-    if (pendingSummaryCardsContainer) pendingSummaryCardsContainer.innerHTML = '';
-    if (settledSummaryCardsContainer) settledSummaryCardsContainer.innerHTML = '';
-    pendingContainer.innerHTML = '';
-    settledContainer.innerHTML = '';
-
-    const pendingList = debts.filter(d => d.status === 'pending');
-    const settledList = debts.filter(d => d.status === 'paid');
-
-    pendingList.forEach(d => totalPending += d.amount);
-    settledList.forEach(d => totalSettled += d.amount);
-
-    document.getElementById('statTotalSpend').innerText = `$${totalSpend.toFixed(2)}`;
-    document.getElementById('statTotalPending').innerText = `$${totalPending.toFixed(2)}`;
-    document.getElementById('statTotalSettled').innerText = `$${totalSettled.toFixed(2)}`;
-
-    // --- PENDING SUMMARY (Who owes what) ---
-    if (pendingSummaryCardsContainer && pendingList.length > 0) {
-      const debtorTotals = {};
-      pendingList.forEach(d => {
-        const key = `${d.from} owes ${d.to}`;
-        debtorTotals[key] = (debtorTotals[key] || 0) + d.amount;
-      });
-
-      Object.entries(debtorTotals).forEach(([rel, amount]) => {
-        const chip = document.createElement('div');
-        chip.className = 'summary-chip';
-        chip.innerHTML = `👤 <span><strong>${rel}</strong>: <strong>$${amount.toFixed(2)}</strong> total</span>`;
-        pendingSummaryCardsContainer.appendChild(chip);
-      });
-    }
-
-    // --- SETTLED SUMMARY (Total paid by each member) ---
-    if (settledSummaryCardsContainer && settledList.length > 0) {
-      const payerTotals = {};
-      settledList.forEach(d => {
-        payerTotals[d.from] = (payerTotals[d.from] || 0) + d.amount;
-      });
-
-      Object.entries(payerTotals).forEach(([member, amount]) => {
-        const chip = document.createElement('div');
-        chip.className = 'summary-chip-paid';
-        chip.innerHTML = `✅ <span><strong>${member}</strong> paid: <strong>$${amount.toFixed(2)}</strong> total</span>`;
-        settledSummaryCardsContainer.appendChild(chip);
-      });
-    }
-
-    // Render Pending Items List
-    if (pendingList.length === 0) {
-      pendingContainer.innerHTML = '<div class="empty-state">🎉 All settled up! No pending payments.</div>';
-    } else {
-      pendingList.forEach(d => {
-        const row = document.createElement('div');
-        row.className = 'item-card';
-        row.innerHTML = `
-          <div>
-            <div><strong>${d.from}</strong> owes <strong>${d.to}</strong>: <span style="color:var(--primary); font-weight:700;">$${d.amount.toFixed(2)}</span></div>
-            <div class="item-meta">Date: ${d.date} • ${d.spots} spot${d.spots > 1 ? 's' : ''}</div>
-          </div>
-          <div>
-            <button class="btn-pay btn-sm" onclick="window.dbMarkAsPaid('${d.id}')">✓ Mark as Paid</button>
-          </div>
-        `;
-        pendingContainer.appendChild(row);
-      });
-    }
-
-    // Render Settled Items List
-    if (settledList.length === 0) {
-      settledContainer.innerHTML = '<div class="empty-state">No completed payments recorded yet.</div>';
-    } else {
-      settledList.forEach(d => {
-        const row = document.createElement('div');
-        row.className = 'item-card';
-        row.innerHTML = `
-          <div>
-            <div><span class="badge badge-paid">PAID</span> <strong>${d.from}</strong> paid <strong>${d.to}</strong> $${d.amount.toFixed(2)}</div>
-            <div class="item-meta">Session: ${d.date} • Paid on: ${d.paidAt ? d.paidAt.split('T')[0] : 'Done'}</div>
-          </div>
-          <div>
-            <button class="btn-undo btn-sm" onclick="window.dbMarkAsUnpaid('${d.id}')">Undo</button>
-          </div>
-        `;
-        settledContainer.appendChild(row);
-      });
-    }
   }
 
   window.confirmDelete = function(sessionId) {
