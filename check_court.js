@@ -32,18 +32,15 @@ async function checkAvailability() {
 
   const page = await context.newPage();
 
-  // Hide automation flags
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
   });
 
   try {
-    // 1. Navigate directly to organization booking portal
     console.log(`1. Navigating to ${BOOKING_URL}...`);
     await page.goto(BOOKING_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForTimeout(3000);
 
-    // 2. Perform Login if redirected to a login page
     if (page.url().includes('Login') || page.url().includes('Account')) {
       console.log('2. Redirected to login page. Entering credentials...');
       const usernameInput = await page.waitForSelector('input[name="UserName"], input[name="Email"], input[type="email"]', { timeout: 10000 });
@@ -63,15 +60,13 @@ async function checkAvailability() {
       }
     }
 
-    // 3. Ensure we are on the organization booking URL after logging in
     if (!page.url().includes('13206')) {
-      console.log('3. Redirecting to Pickleball Court Reservation page...');
+      console.log('3. Navigating to Pickleball Court Reservation grid...');
       await page.goto(BOOKING_URL, { waitUntil: 'domcontentloaded' });
     }
 
     await page.waitForTimeout(4000);
 
-    // 4. Click the "TODAY" button if present on the scheduler header
     console.log('4. Looking for TODAY button...');
     const todayBtn = page.locator('button, a, div').filter({ hasText: /^TODAY$/i }).first();
     if (await todayBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -80,7 +75,6 @@ async function checkAvailability() {
       await page.waitForTimeout(3000);
     }
 
-    // 5. Check slot availability for target time
     console.log(`5. Inspecting schedule for ${TARGET_TIME}...`);
     const pageText = await page.innerText('body');
 
