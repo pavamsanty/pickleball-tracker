@@ -526,6 +526,28 @@
     return '';
   }
 
+  function formatFullTimeSlot(startTimeStr, durationStr) {
+    if (!startTimeStr) return '';
+    const parts = startTimeStr.split(':');
+    if (parts.length < 2) return startTimeStr;
+
+    let startH = parseInt(parts[0], 10);
+    let startM = parseInt(parts[1], 10);
+
+    let addMinutes = 60;
+    if (durationStr === '30m') addMinutes = 30;
+    else if (durationStr === '2 hr') addMinutes = 120;
+
+    let totalM = startH * 60 + startM + addMinutes;
+    let endH = Math.floor(totalM / 60) % 24;
+    let endM = totalM % 60;
+
+    const startFormatted = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+    const endFormatted = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+    return `${startFormatted} - ${endFormatted}`;
+  }
+
   function updateNextEnrollmentId() {
     const members = window.allMembers || [];
     let maxId = 0;
@@ -695,17 +717,22 @@
   function renderBookedTab() {
     const container = document.getElementById('bookedCourtsList');
     const bookings = window.allBookedCourts || [];
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    if (bookings.length === 0) {
-      container.innerHTML = '<div class="empty-state">No booked court slots added yet.</div>';
+    // Hide passed days
+    const upcomingBookings = bookings.filter(b => (b.date || '') >= todayStr);
+
+    if (upcomingBookings.length === 0) {
+      container.innerHTML = '<div class="empty-state">No upcoming booked court slots.</div>';
       return;
     }
 
     container.innerHTML = '';
-    bookings.forEach(b => {
+    upcomingBookings.forEach(b => {
       const isEditing = editingBookingId === b.id;
       const dayName = getDayOfWeek(b.date);
       const durationText = b.duration || '1 hr';
+      const fullTimeSlot = formatFullTimeSlot(b.time, durationText);
       const card = document.createElement('div');
       card.className = 'item-card';
 
@@ -743,7 +770,7 @@
       } else {
         card.innerHTML = `
           <div>
-            <div><strong>📅 ${dayName}, ${b.date}</strong> &nbsp;|&nbsp; ⏰ <strong>${b.time}</strong> <span class="badge badge-duration">⏳ ${durationText}</span></div>
+            <div><strong>📅 ${dayName}, ${b.date}</strong> &nbsp;|&nbsp; ⏰ <strong>${fullTimeSlot}</strong> <span class="badge badge-duration">⏳ ${durationText}</span></div>
             <div class="item-meta" style="margin-top: 4px;">Booked in name of: <strong>${b.bookedBy}</strong></div>
           </div>
           <div style="display: flex; gap: 6px;">
