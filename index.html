@@ -40,10 +40,10 @@
     }
     .tab-btn {
       flex: 1;
-      min-width: 120px;
+      min-width: 110px;
       border: none;
       background: transparent;
-      padding: 10px 10px;
+      padding: 10px 8px;
       font-size: 0.88rem;
       font-weight: 600;
       color: var(--text-muted);
@@ -188,7 +188,7 @@
     .member-table th { background: #f1f5f9; color: var(--text-muted); }
   </style>
 
-  <!-- Firebase Realtime Database SDK via CDN -->
+  <!-- Firebase Realtime Database SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
     import { 
@@ -212,7 +212,7 @@
       const data = snapshot.val() || {};
       window.allSessions = Object.keys(data).map(key => ({ id: key, ...data[key] }));
       window.allSessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      window.renderCurrentView();
+      if (window.renderCurrentView) window.renderCurrentView();
     });
 
     // Real-time listener for Debts
@@ -220,7 +220,7 @@
       const data = snapshot.val() || {};
       window.allDebts = Object.keys(data).map(key => ({ id: key, ...data[key] }));
       window.allDebts.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      window.renderCurrentView();
+      if (window.renderCurrentView) window.renderCurrentView();
     });
 
     // Real-time listener for Members
@@ -228,8 +228,8 @@
       const data = snapshot.val() || {};
       window.allMembers = Object.keys(data).map(key => ({ id: key, ...data[key] }));
       window.allMembers.sort((a, b) => a.enrollmentId - b.enrollmentId);
-      window.updateNextEnrollmentId();
-      window.renderCurrentView();
+      if (window.updateNextEnrollmentId) window.updateNextEnrollmentId();
+      if (window.renderCurrentView) window.renderCurrentView();
     });
 
     window.dbAddSession = async function(sessionData, debtsData) {
@@ -268,7 +268,7 @@
 
     window.dbDeleteSession = async function(sessionId) {
       await remove(ref(db, `sessions/${sessionId}`));
-      const relatedDebts = window.allDebts.filter(d => d.sessionId === sessionId);
+      const relatedDebts = (window.allDebts || []).filter(d => d.sessionId === sessionId);
       for (const d of relatedDebts) {
         await remove(ref(db, `debts/${d.id}`));
       }
@@ -283,7 +283,7 @@
     <div class="subtitle">Realtime cloud balances & member management</div>
   </header>
 
-  <!-- Navigation -->
+  <!-- Navigation Tabs -->
   <div class="nav-tabs">
     <button class="tab-btn active" id="tab-btn-add" onclick="switchTab('add')">➕ Add Session</button>
     <button class="tab-btn" id="tab-btn-balances" onclick="switchTab('balances')">💰 Current Status & Settle</button>
@@ -410,110 +410,16 @@
     </div>
   </div>
 
-  <!-- TAB 5: HISTORY (All Past & Completed Sessions) -->
+  <!-- TAB 5: HISTORY (Full Past Log) -->
   <div id="tab-history" style="display: none;">
     <div class="card">
       <h2>📜 Past Court Sessions</h2>
       <div id="historyList"></div>
     </div>
   </div>
+</div>
 
 <script>
-  // TAB 4: Upcoming Booked Courts (Hides past dates)
-  function renderBookedCourtsTab() {
-    const sessions = window.allSessions || [];
-    const container = document.getElementById('bookedList');
-    if (!container) return;
-    container.innerHTML = '';
-
-    // Filter ONLY upcoming dates (today or future)
-    const upcoming = sessions.filter(s => !isPastDate(s.date));
-
-    if (upcoming.length === 0) {
-      container.innerHTML = '<div class="empty-state">No upcoming booked court sessions found.</div>';
-      return;
-    }
-
-    upcoming.forEach((s) => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      
-      const costVal = typeof s.cost === 'number' ? s.cost : parseFloat(s.cost || 0);
-      const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
-
-      const formattedDay = formatDateWithDay(s.date);
-      const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
-      const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
-
-      let playerChips = (s.players || []).map(p => {
-        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
-        return `<span class="chip">${p.name}${extra}</span>`;
-      }).join(' ');
-
-      card.innerHTML = `
-        <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span></div>
-          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
-        </div>
-        <div class="item-meta">
-          <strong>Paid by:</strong> ${s.payer || 'Unknown'} &nbsp;|&nbsp; 
-          <strong>Total Spots:</strong> ${s.totalSpots || 0} &nbsp;|&nbsp; 
-          <strong>Cost/Person:</strong> $${spotVal.toFixed(2)}
-        </div>
-        <div class="history-players" style="margin-top: 10px;">
-          ${playerChips}
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }
-
-  // TAB 5: History (All Completed & Past Sessions)
-  function renderHistoryTab() {
-    const sessions = window.allSessions || [];
-    const container = document.getElementById('historyList');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (sessions.length === 0) {
-      container.innerHTML = '<div class="empty-state">No past sessions recorded yet.</div>';
-      return;
-    }
-
-    sessions.forEach((s) => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      
-      const costVal = typeof s.cost === 'number' ? s.cost : parseFloat(s.cost || 0);
-      const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
-
-      const formattedDay = formatDateWithDay(s.date);
-      const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
-      const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
-      const isCompleted = isPastDate(s.date) ? '<span class="chip" style="background:#f1f5f9; color:#94a3b8;">Completed</span>' : '';
-
-      let playerChips = (s.players || []).map(p => {
-        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
-        return `<span class="chip">${p.name}${extra}</span>`;
-      }).join(' ');
-
-      card.innerHTML = `
-        <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${isCompleted}</div>
-          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
-        </div>
-        <div class="item-meta">
-          <strong>Paid by:</strong> ${s.payer || 'Unknown'} &nbsp;|&nbsp; 
-          <strong>Total Spots:</strong> ${s.totalSpots || 0} &nbsp;|&nbsp; 
-          <strong>Cost/Person:</strong> $${spotVal.toFixed(2)}
-        </div>
-        <div class="history-players" style="margin-top: 10px;">
-          ${playerChips}
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }
   let activeTab = 'add';
   let isReadOnlyMode = false;
   let activePlayers = [
@@ -523,7 +429,7 @@
     { name: 'Elena', plus: 0 }
   ];
 
-  wwindow.onload = function() {
+  window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
     isReadOnlyMode = urlParams.get('mode') === 'view' || urlParams.get('readonly') === 'true';
 
@@ -605,7 +511,7 @@
     return sessionDate < today;
   }
 
-  function updateNextEnrollmentId() {
+  window.updateNextEnrollmentId = function() {
     const members = window.allMembers || [];
     let maxId = 0;
     members.forEach(m => {
@@ -615,7 +521,7 @@
     });
     const nextIdElem = document.getElementById('newEnrollmentId');
     if (nextIdElem) nextIdElem.value = maxId + 1;
-  }
+  };
 
   function renderPlayerInputs() {
     const list = document.getElementById('playerList');
@@ -923,22 +829,20 @@
     }
   }
 
-  function renderHistoryTab() {
+  function renderBookedCourtsTab() {
     const sessions = window.allSessions || [];
-    const historyContainer = document.getElementById('historyList');
-    
-    if (!historyContainer) return;
-    historyContainer.innerHTML = '';
+    const container = document.getElementById('bookedList');
+    if (!container) return;
+    container.innerHTML = '';
 
-    if (sessions.length === 0) {
-      historyContainer.innerHTML = '<div class="empty-state">No booked court sessions found.</div>';
+    const upcoming = sessions.filter(s => !isPastDate(s.date));
+
+    if (upcoming.length === 0) {
+      container.innerHTML = '<div class="empty-state">No upcoming booked court sessions found.</div>';
       return;
     }
 
-    // Sort: Upcoming sessions first, then past sessions
-    const sortedSessions = [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-    sortedSessions.forEach((s) => {
+    upcoming.forEach((s) => {
       const card = document.createElement('div');
       card.className = 'history-card';
       
@@ -948,8 +852,6 @@
       const formattedDay = formatDateWithDay(s.date);
       const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
       const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
-      
-      const pastBadge = isPastDate(s.date) ? '<span class="chip" style="background:#f1f5f9; color:#94a3b8;">Completed</span>' : '';
 
       let playerChips = (s.players || []).map(p => {
         const extra = p.plus > 0 ? ` (+${p.plus})` : '';
@@ -958,7 +860,7 @@
 
       card.innerHTML = `
         <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${pastBadge}</div>
+          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span></div>
           <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
         </div>
         <div class="item-meta">
@@ -970,7 +872,53 @@
           ${playerChips}
         </div>
       `;
-      historyContainer.appendChild(card);
+      container.appendChild(card);
+    });
+  }
+
+  function renderHistoryTab() {
+    const sessions = window.allSessions || [];
+    const container = document.getElementById('historyList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (sessions.length === 0) {
+      container.innerHTML = '<div class="empty-state">No past sessions recorded yet.</div>';
+      return;
+    }
+
+    sessions.forEach((s) => {
+      const card = document.createElement('div');
+      card.className = 'history-card';
+      
+      const costVal = typeof s.cost === 'number' ? s.cost : parseFloat(s.cost || 0);
+      const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
+
+      const formattedDay = formatDateWithDay(s.date);
+      const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
+      const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
+      const isCompleted = isPastDate(s.date) ? '<span class="chip" style="background:#f1f5f9; color:#94a3b8;">Completed</span>' : '';
+
+      let playerChips = (s.players || []).map(p => {
+        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
+        return `<span class="chip">${p.name}${extra}</span>`;
+      }).join(' ');
+
+      card.innerHTML = `
+        <div class="history-header">
+          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${isCompleted}</div>
+          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
+        </div>
+        <div class="item-meta">
+          <strong>Paid by:</strong> ${s.payer || 'Unknown'} &nbsp;|&nbsp; 
+          <strong>Total Spots:</strong> ${s.totalSpots || 0} &nbsp;|&nbsp; 
+          <strong>Cost/Person:</strong> $${spotVal.toFixed(2)}
+        </div>
+        <div class="history-players" style="margin-top: 10px;">
+          ${playerChips}
+        </div>
+      `;
+      container.appendChild(card);
     });
   }
 
