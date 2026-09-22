@@ -484,12 +484,25 @@
   ];
 
   window.onload = function() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('sessionDate').value = today;
-    document.getElementById('bookedDate').value = today;
-    document.getElementById('courtCost').value = '60.00';
-    renderPlayerInputs();
-  };
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('sessionDate').value = today;
+  document.getElementById('bookedDate').value = today;
+  document.getElementById('courtCost').value = '60.00';
+  renderPlayerInputs();
+
+  // Check URL parameters for shareable view
+  const urlParams = new URLSearchParams(window.location.search);
+  const viewMode = urlParams.get('view');
+
+  if (viewMode === 'booked') {
+    // Hide navigation bar
+    const navTabs = document.querySelector('.nav-tabs');
+    if (navTabs) navTabs.style.display = 'none';
+
+    // Switch directly to the booked tab
+    switchTab('booked');
+  }
+};
 
   function switchTab(tabId) {
     activeTab = tabId;
