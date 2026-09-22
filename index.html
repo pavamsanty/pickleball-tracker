@@ -825,14 +825,15 @@
     if (!historyContainer) return;
     historyContainer.innerHTML = '';
 
-    const activeUpcomingSessions = sessions.filter(s => !isPastDate(s.date));
-
-    if (activeUpcomingSessions.length === 0) {
-      historyContainer.innerHTML = '<div class="empty-state">No upcoming booked court sessions found.</div>';
+    if (sessions.length === 0) {
+      historyContainer.innerHTML = '<div class="empty-state">No booked court sessions found.</div>';
       return;
     }
 
-    activeUpcomingSessions.forEach((s) => {
+    // Sort: Upcoming sessions first, then past sessions
+    const sortedSessions = [...sessions].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    sortedSessions.forEach((s) => {
       const card = document.createElement('div');
       card.className = 'history-card';
       
@@ -842,6 +843,8 @@
       const formattedDay = formatDateWithDay(s.date);
       const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
       const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
+      
+      const pastBadge = isPastDate(s.date) ? '<span class="chip" style="background:#f1f5f9; color:#94a3b8;">Completed</span>' : '';
 
       let playerChips = (s.players || []).map(p => {
         const extra = p.plus > 0 ? ` (+${p.plus})` : '';
@@ -850,7 +853,7 @@
 
       card.innerHTML = `
         <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span></div>
+          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${pastBadge}</div>
           <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
         </div>
         <div class="item-meta">
