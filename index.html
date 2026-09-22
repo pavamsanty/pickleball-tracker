@@ -206,6 +206,7 @@
     window.allSessions = [];
     window.allDebts = [];
     window.allMembers = [];
+    window.allBookings = [];
 
     // Real-time listener for Sessions
     onValue(ref(db, 'sessions'), (snapshot) => {
@@ -232,6 +233,14 @@
       if (window.renderCurrentView) window.renderCurrentView();
     });
 
+    // Real-time listener for Standalone Court Bookings
+    onValue(ref(db, 'court_bookings'), (snapshot) => {
+      const data = snapshot.val() || {};
+      window.allBookings = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+      window.allBookings.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      if (window.renderCurrentView) window.renderCurrentView();
+    });
+
     window.dbAddSession = async function(sessionData, debtsData) {
       const sessRef = push(ref(db, 'sessions'));
       await set(sessRef, sessionData);
@@ -241,6 +250,19 @@
         const debtRef = push(ref(db, 'debts'));
         await set(debtRef, d);
       }
+    };
+
+    window.dbAddBooking = async function(bookingData) {
+      const bookRef = push(ref(db, 'court_bookings'));
+      await set(bookRef, bookingData);
+    };
+
+    window.dbUpdateBooking = async function(bookingId, bookingData) {
+      await update(ref(db, `court_bookings/${bookingId}`), bookingData);
+    };
+
+    window.dbDeleteBooking = async function(bookingId) {
+      await remove(ref(db, `court_bookings/${bookingId}`));
     };
 
     window.dbAddMember = async function(memberData) {
@@ -306,14 +328,6 @@
         <div class="form-group">
           <label>Court Cost ($)</label>
           <input type="number" id="courtCost" placeholder="60.00" step="0.01" />
-        </div>
-        <div class="form-group">
-          <label>Start Time</label>
-          <input type="time" id="sessionStartTime" value="10:00" />
-        </div>
-        <div class="form-group">
-          <label>Duration (Hours)</label>
-          <input type="number" id="sessionDuration" value="1" min="0.5" step="0.5" />
         </div>
       </div>
     </div>
@@ -402,15 +416,46 @@
     </div>
   </div>
 
-  <!-- TAB 4: BOOKED COURTS (Upcoming Only) -->
+  <!-- TAB 4: BOOKED COURTS (Standalone Reservation Schedule) -->
   <div id="tab-booked" style="display: none;">
+    <div id="bookingSuccessMsg" class="alert-success">✓ Court booking saved!</div>
+
+    <div class="card" id="bookingFormCard">
+      <h2 id="bookingFormTitle">Add Booked Court Reservation</h2>
+      <input type="hidden" id="editingBookingId" value="" />
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Date of Play</label>
+          <input type="date" id="bookingDate" />
+        </div>
+        <div class="form-group">
+          <label>Start Time</label>
+          <input type="time" id="bookingStartTime" value="10:00" />
+        </div>
+        <div class="form-group">
+          <label>Person Who Booked</label>
+          <input type="text" id="bookingPerson" placeholder="Name of person" />
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="bookingDuration">
+            <option value="0.5">30 min</option>
+            <option value="1" selected>1 hr</option>
+            <option value="2">2 hrs</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" id="saveBookingBtn" onclick="handleSaveBooking()">Add Reservation</button>
+      <button class="btn-secondary" id="cancelEditBookingBtn" onclick="resetBookingForm()" style="display:none; margin-top:8px; width:100%;">Cancel Edit</button>
+    </div>
+
     <div class="card">
       <h2>📅 Upcoming Booked Courts Schedule</h2>
       <div id="bookedList"></div>
     </div>
   </div>
 
-  <!-- TAB 5: HISTORY (Full Past Log) -->
+  <!-- TAB 5: HISTORY (Financial Court History Log) -->
   <div id="tab-history" style="display: none;">
     <div class="card">
       <h2>📜 Past Court Sessions</h2>
@@ -424,10 +469,9 @@
   let isReadOnlyMode = false;
   let activePlayers = [
     { name: 'Santosh', plus: 0 },
-    { name: 'Kedar', plus: 0 },
-    { name: 'Rijwan', plus: 0 },
-    { name: 'Shashikant', plus: 0 },
-    { name: 'Nitin', plus: 0 }
+    { name: 'Alex', plus: 1 },
+    { name: 'Dave', plus: 0 },
+    { name: 'Elena', plus: 0 }
   ];
 
   window.onload = function() {
@@ -438,9 +482,11 @@
       document.getElementById('tab-btn-add').style.display = 'none';
       document.getElementById('tab-btn-balances').style.display = 'none';
       document.getElementById('tab-btn-members').style.display = 'none';
+      document.getElementById('bookingFormCard').style.display = 'none';
       switchTab('booked');
     } else {
       document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('courtCost').value = '60.00';
       renderPlayerInputs();
     }
@@ -498,7 +544,10 @@
 
     const startFormatted = format12h(startDate);
     const endFormatted = format12h(endDate);
-    const durLabel = dur === 1 ? '1 hr' : `${dur} hrs`;
+    
+    let durLabel = `${dur} hrs`;
+    if (dur === 0.5) durLabel = '30 min';
+    else if (dur === 1) durLabel = '1 hr';
 
     return `⏰ ${startFormatted} to ${endFormatted} ⏳ ${durLabel}`;
   }
@@ -578,8 +627,6 @@
   async function handleAddCost() {
     const date = document.getElementById('sessionDate').value;
     const cost = parseFloat(document.getElementById('courtCost').value) || 0;
-    const startTime = document.getElementById('sessionStartTime').value;
-    const duration = parseFloat(document.getElementById('sessionDuration').value) || 1;
     const payer = document.getElementById('payerSelect').value;
 
     if (!date || cost <= 0) {
@@ -602,8 +649,6 @@
     const newSession = {
       date: date,
       cost: cost,
-      startTime: startTime,
-      duration: duration,
       payer: payer,
       players: validPlayers,
       totalSpots: totalHeadcount,
@@ -645,6 +690,120 @@
       btn.innerText = 'Add Cost';
     }
   }
+
+  // --- STANDALONE BOOKED COURTS LOGIC ---
+  async function handleSaveBooking() {
+    const editId = document.getElementById('editingBookingId').value;
+    const date = document.getElementById('bookingDate').value;
+    const startTime = document.getElementById('bookingStartTime').value;
+    const person = document.getElementById('bookingPerson').value.trim();
+    const duration = parseFloat(document.getElementById('bookingDuration').value) || 1;
+
+    if (!date || !startTime || !person) {
+      alert('Please fill out the date, start time, and person who booked.');
+      return;
+    }
+
+    const bookingData = {
+      date: date,
+      startTime: startTime,
+      person: person,
+      duration: duration,
+      updatedAt: new Date().toISOString()
+    };
+
+    const btn = document.getElementById('saveBookingBtn');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+
+    try {
+      if (editId) {
+        await window.dbUpdateBooking(editId, bookingData);
+      } else {
+        await window.dbAddBooking(bookingData);
+      }
+      resetBookingForm();
+      const msg = document.getElementById('bookingSuccessMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    } catch (err) {
+      alert('Error saving booking: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function editBooking(id) {
+    const bookings = window.allBookings || [];
+    const item = bookings.find(b => b.id === id);
+    if (!item) return;
+
+    document.getElementById('editingBookingId').value = item.id;
+    document.getElementById('bookingDate').value = item.date;
+    document.getElementById('bookingStartTime').value = item.startTime;
+    document.getElementById('bookingPerson').value = item.person;
+    document.getElementById('bookingDuration').value = item.duration;
+
+    document.getElementById('bookingFormTitle').innerText = 'Edit Booked Court Reservation';
+    document.getElementById('saveBookingBtn').innerText = 'Update Reservation';
+    document.getElementById('cancelEditBookingBtn').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetBookingForm() {
+    document.getElementById('editingBookingId').value = '';
+    document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('bookingStartTime').value = '10:00';
+    document.getElementById('bookingPerson').value = '';
+    document.getElementById('bookingDuration').value = '1';
+
+    document.getElementById('bookingFormTitle').innerText = 'Add Booked Court Reservation';
+    document.getElementById('saveBookingBtn').innerText = 'Add Reservation';
+    document.getElementById('cancelEditBookingBtn').style.display = 'none';
+  }
+
+  function renderBookedCourtsTab() {
+    const bookings = window.allBookings || [];
+    const container = document.getElementById('bookedList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const upcoming = bookings.filter(b => !isPastDate(b.date));
+
+    if (upcoming.length === 0) {
+      container.innerHTML = '<div class="empty-state">No upcoming booked court sessions found.</div>';
+      return;
+    }
+
+    upcoming.forEach((b) => {
+      const card = document.createElement('div');
+      card.className = 'history-card';
+
+      const formattedDay = formatDateWithDay(b.date);
+      const timeDisplay = b.startTime ? formatSessionTimeString(b.startTime, b.duration || 1) : '';
+      const hideActions = isReadOnlyMode ? 'style="display:none;"' : '';
+
+      card.innerHTML = `
+        <div class="history-header">
+          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay}</div>
+          <div ${hideActions}>
+            <button class="btn-secondary btn-sm" onclick="editBooking('${b.id}')">Edit</button>
+            <button class="btn-danger btn-sm" onclick="confirmDeleteBooking('${b.id}')">Delete</button>
+          </div>
+        </div>
+        <div class="item-meta">
+          <strong>Booked by:</strong> ${b.person || 'Unknown'}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  window.confirmDeleteBooking = function(id) {
+    if (confirm('Are you sure you want to delete this booked court reservation?')) {
+      window.dbDeleteBooking(id);
+    }
+  };
 
   async function handleAddMember() {
     const enrollmentId = parseInt(document.getElementById('newEnrollmentId').value, 10) || 1;
@@ -830,53 +989,6 @@
     }
   }
 
-  function renderBookedCourtsTab() {
-    const sessions = window.allSessions || [];
-    const container = document.getElementById('bookedList');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const upcoming = sessions.filter(s => !isPastDate(s.date));
-
-    if (upcoming.length === 0) {
-      container.innerHTML = '<div class="empty-state">No upcoming booked court sessions found.</div>';
-      return;
-    }
-
-    upcoming.forEach((s) => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      
-      const costVal = typeof s.cost === 'number' ? s.cost : parseFloat(s.cost || 0);
-      const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
-
-      const formattedDay = formatDateWithDay(s.date);
-      const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
-      const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
-
-      let playerChips = (s.players || []).map(p => {
-        const extra = p.plus > 0 ? ` (+${p.plus})` : '';
-        return `<span class="chip">${p.name}${extra}</span>`;
-      }).join(' ');
-
-      card.innerHTML = `
-        <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span></div>
-          <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
-        </div>
-        <div class="item-meta">
-          <strong>Paid by:</strong> ${s.payer || 'Unknown'} &nbsp;|&nbsp; 
-          <strong>Total Spots:</strong> ${s.totalSpots || 0} &nbsp;|&nbsp; 
-          <strong>Cost/Person:</strong> $${spotVal.toFixed(2)}
-        </div>
-        <div class="history-players" style="margin-top: 10px;">
-          ${playerChips}
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }
-
   function renderHistoryTab() {
     const sessions = window.allSessions || [];
     const container = document.getElementById('historyList');
@@ -896,7 +1008,6 @@
       const spotVal = typeof s.costPerSpot === 'number' ? s.costPerSpot : parseFloat(s.costPerSpot || 0);
 
       const formattedDay = formatDateWithDay(s.date);
-      const timeDisplay = s.startTime ? formatSessionTimeString(s.startTime, s.duration || 1) : '';
       const hideDelete = isReadOnlyMode ? 'style="display:none;"' : '';
       const isCompleted = isPastDate(s.date) ? '<span class="chip" style="background:#f1f5f9; color:#94a3b8;">Completed</span>' : '';
 
@@ -907,7 +1018,7 @@
 
       card.innerHTML = `
         <div class="history-header">
-          <div>📅 ${formattedDay} &nbsp;|&nbsp; ${timeDisplay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${isCompleted}</div>
+          <div>📅 ${formattedDay} — <span style="color:var(--primary);">$${costVal.toFixed(2)}</span> ${isCompleted}</div>
           <button class="btn-danger btn-sm" onclick="confirmDelete('${s.id}')" ${hideDelete}>Delete</button>
         </div>
         <div class="item-meta">
