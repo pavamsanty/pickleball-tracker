@@ -831,12 +831,46 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
           </div>
         `;
       } else {
+        const rsvps = b.rsvps || [];
+        const rsvpCount = rsvps.length;
+        const isExpanded = window.expandedRSVPs && window.expandedRSVPs.has(b.id);
+        
+        // Format names separated by commas, adding a minus button to each
+        const rsvpListHtml = rsvps.length > 0 
+          ? rsvps.map(name => `
+              <span style="white-space: nowrap; color: var(--text-muted);">
+                ${name} <button onclick="handleRemoveRSVP('${b.id}', '${name.replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:#dc2626; cursor:pointer; padding:0 2px; font-size:0.8rem; vertical-align:middle;" title="Remove ${name}">➖</button>
+              </span>
+            `).join(', ')
+          : '<span style="color: var(--text-muted);">No RSVPs yet</span>';
+
+        // Keep items at the top so action buttons don't stretch vertically
+        card.style.alignItems = 'flex-start'; 
+        
         card.innerHTML = `
-          <div>
+          <div style="flex: 1;">
             <div><strong>📅 ${dayName}, ${b.date}</strong> &nbsp;|&nbsp; ⏰ <strong>${fullTimeSlot}</strong> <span class="badge badge-duration">⏳ ${durationText}</span></div>
             <div class="item-meta" style="margin-top: 4px;">Booked in name of: <strong>${b.bookedBy}</strong></div>
+            
+            <div style="margin-top: 10px;">
+              <button class="btn-secondary btn-sm" onclick="toggleRSVP('${b.id}')" style="background: #f1f5f9; border-radius: 12px; padding: 4px 10px; border: 1px solid var(--border);">
+                👥 RSVPs <span style="background: var(--primary); color: white; border-radius: 10px; padding: 1px 6px; font-size: 0.75rem; margin-left: 4px; font-weight: bold;">${rsvpCount}</span>
+              </button>
+            </div>
+
+            ${isExpanded ? `
+              <div style="margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 0.85rem; margin-bottom: 12px;">
+                  <strong>Attending:</strong> ${rsvpListHtml}
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="rsvpName_${b.id}" placeholder="Add name (e.g. Snehal)" style="padding: 6px 10px; font-size: 0.85rem; flex: 1; border-radius: 6px; border: 1px solid var(--border); background: #fff;">
+                  <button class="btn-primary btn-sm" onclick="handleAddRSVP('${b.id}')" style="padding: 6px 12px; border-radius: 6px; width: auto;">➕ Add</button>
+                </div>
+              </div>
+            ` : ''}
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: 6px; flex-shrink: 0;">
             <button class="btn-edit" onclick="startBookingEdit('${b.id}')">✏️ Edit</button>
             <button class="btn-danger btn-sm" onclick="confirmDeleteBooking('${b.id}')">Delete</button>
           </div>
