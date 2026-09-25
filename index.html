@@ -726,7 +726,57 @@
       btn.innerText = 'Add Booking';
     }
   }
+// Track which schedules are expanded
+window.expandedRSVPs = new Set();
 
+window.toggleRSVP = function(bookingId) {
+  if (window.expandedRSVPs.has(bookingId)) {
+    window.expandedRSVPs.delete(bookingId);
+  } else {
+    window.expandedRSVPs.add(bookingId);
+  }
+  renderBookedTab();
+};
+
+window.handleAddRSVP = async function(bookingId) {
+  const input = document.getElementById(`rsvpName_${bookingId}`);
+  if (!input) return;
+  
+  const name = input.value.trim();
+  if (!name) return;
+
+  const booking = window.allBookedCourts.find(b => b.id === bookingId);
+  if (!booking) return;
+
+  const currentRSVPs = booking.rsvps || [];
+  
+  if (currentRSVPs.map(n => n.toLowerCase()).includes(name.toLowerCase())) {
+    alert(`${name} is already on the RSVP list!`);
+    return;
+  }
+
+  currentRSVPs.push(name);
+  
+  try {
+    await window.dbUpdateBookedCourt(bookingId, { rsvps: currentRSVPs });
+  } catch (err) {
+    alert('Error saving RSVP: ' + err.message);
+  }
+};
+
+window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
+  const booking = window.allBookedCourts.find(b => b.id === bookingId);
+  if (!booking) return;
+
+  const currentRSVPs = booking.rsvps || [];
+  const updatedRSVPs = currentRSVPs.filter(name => name !== nameToRemove);
+
+  try {
+    await window.dbUpdateBookedCourt(bookingId, { rsvps: updatedRSVPs });
+  } catch (err) {
+    alert('Error removing RSVP: ' + err.message);
+  }
+};
   function renderBookedTab() {
     const container = document.getElementById('bookedCourtsList');
     const bookings = window.allBookedCourts || [];
