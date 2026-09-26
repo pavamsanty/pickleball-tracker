@@ -1051,7 +1051,7 @@
     container.innerHTML = html;
   }
 
-  window.confirmDeleteMember = function(memberDbKey) {
+ window.confirmDeleteMember = function(memberDbKey) {
     if (!window.verifyAdmin()) {
       alert("Unauthorized: Incorrect PIN.");
       return; 
@@ -1204,7 +1204,7 @@
     });
   }
 
-  window.confirmDelete = function(sessionId) {
+ window.confirmDelete = function(sessionId) {
     if (!window.verifyAdmin()) {
       alert("Unauthorized: Incorrect PIN.");
       return; 
