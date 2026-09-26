@@ -777,27 +777,63 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
     alert('Error removing RSVP: ' + err.message);
   }
 };
-  function renderBookedTab() {
+ function renderBookedTab() {
     const container = document.getElementById('bookedCourtsList');
     const bookings = window.allBookedCourts || [];
-    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Ensure "today" aligns exactly with 12:00 AM in the user's local time zone
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const todayStr = now.toISOString().split('T')[0];
 
-    // Hide passed days
+    // Filter into two groups
     const upcomingBookings = bookings.filter(b => (b.date || '') >= todayStr);
+    const pastBookings = bookings.filter(b => (b.date || '') < todayStr);
 
-    if (upcomingBookings.length === 0) {
-      container.innerHTML = '<div class="empty-state">No upcoming booked court slots.</div>';
-      return;
-    }
+    // Sort past bookings so the most recent past dates appear at the top of that section
+    pastBookings.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    pastBookings.reverse(); 
 
     container.innerHTML = '';
-    upcomingBookings.forEach(b => {
+
+    // --- 1. RENDER UPCOMING BOOKINGS ---
+    if (upcomingBookings.length === 0) {
+      container.innerHTML += '<div class="empty-state">No upcoming booked court slots.</div>';
+    } else {
+      upcomingBookings.forEach(b => {
+        container.appendChild(createCardElement(b, false));
+      });
+    }
+
+    // --- 2. RENDER PAST BOOKINGS ---
+    if (pastBookings.length > 0) {
+      const pastHeader = document.createElement('h2');
+      pastHeader.innerText = 'Past Schedules';
+      pastHeader.style.marginTop = '36px';
+      pastHeader.style.color = 'var(--text-muted)';
+      container.appendChild(pastHeader);
+
+      pastBookings.forEach(b => {
+        container.appendChild(createCardElement(b, true));
+      });
+    }
+
+    // Helper to generate the card DOM element for both lists
+    function createCardElement(b, isPast) {
       const isEditing = editingBookingId === b.id;
       const dayName = getDayOfWeek(b.date);
       const durationText = b.duration || '1 hr';
       const fullTimeSlot = formatFullTimeSlot(b.time, durationText);
+      
       const card = document.createElement('div');
       card.className = 'item-card';
+      
+      // Visually differentiate past schedules
+      if (isPast) {
+        card.style.opacity = '0.7';
+        card.style.backgroundColor = '#f8fafc';
+        card.style.borderColor = '#e2e8f0';
+      }
 
       if (isEditing) {
         card.innerHTML = `
@@ -844,7 +880,6 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
             `).join(', ')
           : '<span style="color: var(--text-muted);">No RSVPs yet</span>';
 
-        // Keep items at the top so action buttons don't stretch vertically
         card.style.alignItems = 'flex-start'; 
         
         card.innerHTML = `
@@ -859,12 +894,12 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
             </div>
 
             ${isExpanded ? `
-              <div style="margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="margin-top: 10px; padding: 12px; background: ${isPast ? '#e2e8f0' : '#f8fafc'}; border-radius: 8px; border: 1px solid var(--border);">
                 <div style="font-size: 0.85rem; margin-bottom: 12px;">
                   <strong>Attending:</strong> ${rsvpListHtml}
                 </div>
                 <div style="display: flex; gap: 8px;">
-                  <input type="text" id="rsvpName_${b.id}" placeholder="Add name (e.g. Snehal)" style="padding: 6px 10px; font-size: 0.85rem; flex: 1; border-radius: 6px; border: 1px solid var(--border); background: #fff;">
+                  <input type="text" id="rsvpName_${b.id}" placeholder="Add name..." style="padding: 6px 10px; font-size: 0.85rem; flex: 1; border-radius: 6px; border: 1px solid var(--border); background: #fff;">
                   <button class="btn-primary btn-sm" onclick="handleAddRSVP('${b.id}')" style="padding: 6px 12px; border-radius: 6px; width: auto;">➕ Add</button>
                 </div>
               </div>
@@ -876,8 +911,8 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
           </div>
         `;
       }
-      container.appendChild(card);
-    });
+      return card;
+    }
   }
 
   function startBookingEdit(bookingId) {
