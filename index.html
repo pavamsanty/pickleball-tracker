@@ -474,6 +474,15 @@
   let activeTab = 'add';
   let editingBookingId = null;
 
+  // Track which schedules are expanded for RSVP
+  window.expandedRSVPs = new Set();
+
+  // Admin Verification for deletions
+  window.verifyAdmin = function() {
+    const pin = prompt("Enter Admin PIN to delete this record:");
+    return pin === "1234"; // Replace "1234" with your secret PIN
+  };
+
   // Standard players set with default +1 = 0
   let activePlayers = [
     { name: 'Santosh', plus: 0 },
@@ -482,30 +491,27 @@
     { name: 'Shashi', plus: 0 },
     { name: 'Nitin', plus: 0 }
   ];
-  function verifyAdmin() {
-  const pin = prompt("Enter Admin PIN to delete this record:");
-  return pin === "1234"; // Replace "1234" with your secret PIN
-}
+
   window.onload = function() {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('sessionDate').value = today;
-  document.getElementById('bookedDate').value = today;
-  document.getElementById('courtCost').value = '60.00';
-  renderPlayerInputs();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sessionDate').value = today;
+    document.getElementById('bookedDate').value = today;
+    document.getElementById('courtCost').value = '60.00';
+    renderPlayerInputs();
 
-  // Check URL parameters for shareable view
-  const urlParams = new URLSearchParams(window.location.search);
-  const viewMode = urlParams.get('view');
+    // Check URL parameters for shareable view
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewMode = urlParams.get('view');
 
-  if (viewMode === 'booked') {
-    // Hide navigation bar
-    const navTabs = document.querySelector('.nav-tabs');
-    if (navTabs) navTabs.style.display = 'none';
+    if (viewMode === 'booked') {
+      // Hide navigation bar
+      const navTabs = document.querySelector('.nav-tabs');
+      if (navTabs) navTabs.style.display = 'none';
 
-    // Switch directly to the booked tab
-    switchTab('booked');
-  }
-};
+      // Switch directly to the booked tab
+      switchTab('booked');
+    }
+  };
 
   function switchTab(tabId) {
     activeTab = tabId;
@@ -729,58 +735,59 @@
       btn.innerText = 'Add Booking';
     }
   }
-// Track which schedules are expanded
-window.expandedRSVPs = new Set();
 
-window.toggleRSVP = function(bookingId) {
-  if (window.expandedRSVPs.has(bookingId)) {
-    window.expandedRSVPs.delete(bookingId);
-  } else {
-    window.expandedRSVPs.add(bookingId);
-  }
-  renderBookedTab();
-};
+  // --- RSVP LOGIC ---
+  window.toggleRSVP = function(bookingId) {
+    if (window.expandedRSVPs.has(bookingId)) {
+      window.expandedRSVPs.delete(bookingId);
+    } else {
+      window.expandedRSVPs.add(bookingId);
+    }
+    renderBookedTab();
+  };
 
-window.handleAddRSVP = async function(bookingId) {
-  const input = document.getElementById(`rsvpName_${bookingId}`);
-  if (!input) return;
-  
-  const name = input.value.trim();
-  if (!name) return;
+  window.handleAddRSVP = async function(bookingId) {
+    const input = document.getElementById(`rsvpName_${bookingId}`);
+    if (!input) return;
+    
+    const name = input.value.trim();
+    if (!name) return;
 
-  const booking = window.allBookedCourts.find(b => b.id === bookingId);
-  if (!booking) return;
+    const booking = window.allBookedCourts.find(b => b.id === bookingId);
+    if (!booking) return;
 
-  const currentRSVPs = booking.rsvps || [];
-  
-  if (currentRSVPs.map(n => n.toLowerCase()).includes(name.toLowerCase())) {
-    alert(`${name} is already on the RSVP list!`);
-    return;
-  }
+    const currentRSVPs = booking.rsvps || [];
+    
+    if (currentRSVPs.map(n => n.toLowerCase()).includes(name.toLowerCase())) {
+      alert(`${name} is already on the RSVP list!`);
+      return;
+    }
 
-  currentRSVPs.push(name);
-  
-  try {
-    await window.dbUpdateBookedCourt(bookingId, { rsvps: currentRSVPs });
-  } catch (err) {
-    alert('Error saving RSVP: ' + err.message);
-  }
-};
+    currentRSVPs.push(name);
+    
+    try {
+      await window.dbUpdateBookedCourt(bookingId, { rsvps: currentRSVPs });
+    } catch (err) {
+      alert('Error saving RSVP: ' + err.message);
+    }
+  };
 
-window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
-  const booking = window.allBookedCourts.find(b => b.id === bookingId);
-  if (!booking) return;
+  window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
+    const booking = window.allBookedCourts.find(b => b.id === bookingId);
+    if (!booking) return;
 
-  const currentRSVPs = booking.rsvps || [];
-  const updatedRSVPs = currentRSVPs.filter(name => name !== nameToRemove);
+    const currentRSVPs = booking.rsvps || [];
+    const updatedRSVPs = currentRSVPs.filter(name => name !== nameToRemove);
 
-  try {
-    await window.dbUpdateBookedCourt(bookingId, { rsvps: updatedRSVPs });
-  } catch (err) {
-    alert('Error removing RSVP: ' + err.message);
-  }
-};
- function renderBookedTab() {
+    try {
+      await window.dbUpdateBookedCourt(bookingId, { rsvps: updatedRSVPs });
+    } catch (err) {
+      alert('Error removing RSVP: ' + err.message);
+    }
+  };
+
+  // --- RENDER BOOKED TAB ---
+  function renderBookedTab() {
     const container = document.getElementById('bookedCourtsList');
     const bookings = window.allBookedCourts || [];
     
@@ -799,7 +806,7 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
 
     container.innerHTML = '';
 
-    // --- 1. RENDER UPCOMING BOOKINGS ---
+    // 1. RENDER UPCOMING BOOKINGS
     if (upcomingBookings.length === 0) {
       container.innerHTML += '<div class="empty-state">No upcoming booked court slots.</div>';
     } else {
@@ -808,7 +815,7 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
       });
     }
 
-    // --- 2. RENDER PAST BOOKINGS ---
+    // 2. RENDER PAST BOOKINGS
     if (pastBookings.length > 0) {
       const pastHeader = document.createElement('h2');
       pastHeader.innerText = 'Past Schedules';
@@ -831,7 +838,6 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
       const card = document.createElement('div');
       card.className = 'item-card';
       
-      // Visually differentiate past schedules
       if (isPast) {
         card.style.opacity = '0.7';
         card.style.backgroundColor = '#f8fafc';
@@ -874,7 +880,6 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
         const rsvpCount = rsvps.length;
         const isExpanded = window.expandedRSVPs && window.expandedRSVPs.has(b.id);
         
-        // Format names separated by commas, adding a minus button to each
         const rsvpListHtml = rsvps.length > 0 
           ? rsvps.map(name => `
               <span style="white-space: nowrap; color: var(--text-muted);">
@@ -910,7 +915,7 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
           </div>
           <div style="display: flex; gap: 6px; flex-shrink: 0;">
             <button class="btn-edit" onclick="startBookingEdit('${b.id}')">✏️ Edit</button>
-            <button class="btn-danger btn-sm" onclick="confirmDeleteBooking('${b.id}')">Delete</button>
+            <button class="btn-danger btn-sm" onclick="window.confirmDeleteBooking('${b.id}')">Delete</button>
           </div>
         `;
       }
@@ -953,24 +958,20 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
     }
   }
 
-window.confirmDeleteBooking = async function(bookingId) {
-  // --- ADD THESE 4 LINES ---
-  if (!window.verifyAdmin()) {
-    alert("Unauthorized: Incorrect PIN.");
-    return; // This stops the code from continuing to the delete step
-  }
-  // -------------------------
-
-  if (confirm("Are you sure you want to delete this booking?")) {
-    try {
-      await window.dbDeleteBookedCourt(bookingId); 
-    } catch (err) {
-      alert('Error deleting: ' + err.message);
+  window.confirmDeleteBooking = async function(bookingId) {
+    if (!window.verifyAdmin()) {
+      alert("Unauthorized: Incorrect PIN.");
+      return; 
     }
-  }
-};
 
-  
+    if (confirm("Are you sure you want to delete this booking?")) {
+      try {
+        await window.dbDeleteBookedCourt(bookingId); 
+      } catch (err) {
+        alert('Error deleting: ' + err.message);
+      }
+    }
+  };
 
   async function handleAddMember() {
     const enrollmentId = parseInt(document.getElementById('newEnrollmentId').value, 10) || 1;
@@ -1051,6 +1052,11 @@ window.confirmDeleteBooking = async function(bookingId) {
   }
 
   window.confirmDeleteMember = function(memberDbKey) {
+    if (!window.verifyAdmin()) {
+      alert("Unauthorized: Incorrect PIN.");
+      return; 
+    }
+
     if (confirm('Are you sure you want to remove this player?')) {
       window.dbDeleteMember(memberDbKey);
     }
@@ -1199,6 +1205,11 @@ window.confirmDeleteBooking = async function(bookingId) {
   }
 
   window.confirmDelete = function(sessionId) {
+    if (!window.verifyAdmin()) {
+      alert("Unauthorized: Incorrect PIN.");
+      return; 
+    }
+
     if (confirm('Are you sure you want to delete this session and its payments?')) {
       window.dbDeleteSession(sessionId);
     }
