@@ -482,7 +482,10 @@
     { name: 'Shashi', plus: 0 },
     { name: 'Nitin', plus: 0 }
   ];
-
+  function verifyAdmin() {
+  const pin = prompt("Enter Admin PIN to delete this record:");
+  return pin === "1234"; // Replace "1234" with your secret PIN
+}
   window.onload = function() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('sessionDate').value = today;
@@ -950,11 +953,24 @@ window.handleRemoveRSVP = async function(bookingId, nameToRemove) {
     }
   }
 
-  window.confirmDeleteBooking = function(bookingId) {
-    if (confirm('Are you sure you want to delete this booking entry?')) {
-      window.dbDeleteBookedCourt(bookingId);
+window.confirmDeleteBooking = async function(bookingId) {
+  // --- ADD THESE 4 LINES ---
+  if (!window.verifyAdmin()) {
+    alert("Unauthorized: Incorrect PIN.");
+    return; // This stops the code from continuing to the delete step
+  }
+  // -------------------------
+
+  if (confirm("Are you sure you want to delete this booking?")) {
+    try {
+      await window.dbDeleteBookedCourt(bookingId); 
+    } catch (err) {
+      alert('Error deleting: ' + err.message);
     }
-  };
+  }
+};
+
+  
 
   async function handleAddMember() {
     const enrollmentId = parseInt(document.getElementById('newEnrollmentId').value, 10) || 1;
